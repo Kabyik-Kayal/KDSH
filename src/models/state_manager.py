@@ -1,4 +1,4 @@
-""
+"""
 State Manager for BDH synaptic state extraction and injection.
 Handles the "working memory" persistence for narrative consistency checking.
 """
