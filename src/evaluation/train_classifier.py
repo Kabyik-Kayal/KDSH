@@ -35,7 +35,7 @@ def train_classifier():
     
     # Train logistic regression
     print("\nTraining logistic regression...")
-    clf = LogisticRegression(random_state=42, max_iter=1000)
+    clf = LogisticRegression(class_weight='balanced', random_state=42, max_iter=1000)
     clf.fit(X, y)
     
     # Predictions
