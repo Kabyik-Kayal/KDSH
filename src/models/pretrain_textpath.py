@@ -202,7 +202,7 @@ def main():
         'chunk_size': 512,
         'stride': 256,
         'batch_size': 4,  # Small batch for M2 Mac
-        'epochs': 5,
+        'epochs': 50,
         'model_config': config.__dict__,
     }
     
