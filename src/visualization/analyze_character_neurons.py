@@ -29,7 +29,7 @@ def analyze_character_neurons():
     viz_dir = ROOT / "visualizations"
     viz_dir.mkdir(exist_ok=True)
     
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     
     # Load model
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)

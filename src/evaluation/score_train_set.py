@@ -34,7 +34,7 @@ def score_train_set():
     train_csv = ROOT / "Dataset" / "train.csv"
     books_dir = ROOT / "Dataset" / "Books"
     
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device: {device}")
     
     # Load model

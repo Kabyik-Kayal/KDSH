@@ -262,7 +262,7 @@ def test_state_manager():
     ROOT = Path(__file__).resolve().parents[2]
     model_path = ROOT / "models" / "textpath_pretrained.pt"
     
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     
     # Load model
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)

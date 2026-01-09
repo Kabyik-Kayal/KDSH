@@ -151,7 +151,7 @@ def test_scorer():
     model_path = ROOT / "models" / "textpath_pretrained.pt"
     tokenizer_path = ROOT / "models" / "custom_tokenizer.json"
     
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     
     # Load model
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)

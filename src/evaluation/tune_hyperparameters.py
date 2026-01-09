@@ -37,7 +37,7 @@ def tune_retrieval_k():
     train_csv = ROOT / "Dataset" / "train.csv"
     books_dir = ROOT / "Dataset" / "Books"
     
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     config = checkpoint['config']
@@ -143,7 +143,7 @@ def tune_chunk_size():
     train_csv = ROOT / "Dataset" / "train.csv"
     books_dir = ROOT / "Dataset" / "Books"
     
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     config = checkpoint['config']

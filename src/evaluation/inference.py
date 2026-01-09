@@ -36,7 +36,7 @@ def run_inference():
     output_path = ROOT / "results.csv"
     
     # Device
-    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device: {device}\n")
     
     # Load model
