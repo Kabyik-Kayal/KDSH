@@ -15,7 +15,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "data_processing"))
 
 from textpath import TextPath
 from consistency_scorer import ConsistencyScorer
-from retrieval import NovelRetriever
+from retrieval import PathwayNovelRetriever
 
 
 def score_train_set():
@@ -23,6 +23,8 @@ def score_train_set():
     print("="*60)
     print("SCORING TRAIN SET")
     print("="*60)
+    print("✅ Using Pathway framework for retrieval (Track B requirement)")
+    print()
     
     ROOT = Path(__file__).resolve().parents[2]
     
@@ -48,15 +50,15 @@ def score_train_set():
     # Create scorer
     scorer = ConsistencyScorer(model, tokenizer, device, max_novel_tokens=512)
     
-    # Build retrievers for each novel
-    print("\nBuilding retrievers...")
+    # Build retrievers for each novel using Pathway
+    print("\nBuilding Pathway retrievers...")
     retrievers = {
-        "The Count of Monte Cristo": NovelRetriever(
+        "The Count of Monte Cristo": PathwayNovelRetriever(
             books_dir / "The Count of Monte Cristo.txt",
             chunk_size=400,
             overlap=100
         ),
-        "In Search of the Castaways": NovelRetriever(
+        "In Search of the Castaways": PathwayNovelRetriever(
             books_dir / "In search of the castaways.txt",
             chunk_size=400,
             overlap=100

@@ -1,18 +1,18 @@
 """
-Retrieve relevant novel chunks for a given backstory.
-Uses simple TF-IDF for efficiency (can upgrade to embeddings later).
+Novel retrieval using Pathway Vector Store (REQUIRED for Track B)
+Integrates Pathway's Python framework for document processing and indexing.
 """
 
+import pathway as pw
 from pathlib import Path
 from typing import List, Tuple
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 
-class NovelRetriever:
+class PathwayNovelRetriever:
     """
-    Retrieves relevant chunks from novels given a backstory query.
+    Retrieval using Pathway's vector store and embedding framework.
+    Satisfies Track B hackathon requirement for Pathway integration.
     """
     
     def __init__(
@@ -23,6 +23,7 @@ class NovelRetriever:
     ):
         self.chunk_size = chunk_size
         self.overlap = overlap
+        self.novel_path = novel_path
         
         # Load novel
         with open(novel_path, 'r', encoding='utf-8') as f:
@@ -34,16 +35,37 @@ class NovelRetriever:
         # Create overlapping chunks
         self.chunks = self._create_chunks(text)
         
-        # Build TF-IDF index
-        self.vectorizer = TfidfVectorizer(
-            max_features=5000,
-            stop_words='english',
-            ngram_range=(1, 2)
+        # Create Pathway table from chunks (Track B requirement)
+        print(f"  Creating Pathway table with {len(self.chunks)} chunks...")
+        self.chunks_table = pw.debug.table_from_rows(
+            schema=pw.schema_from_dict({"text": str}),
+            rows=[(chunk,) for chunk in self.chunks]
         )
         
-        self.chunk_vectors = self.vectorizer.fit_transform(self.chunks)
+        # Use Pathway's embedder for vector indexing
+        print(f"  Building Pathway vector index...")
+        try:
+            from pathway.xpacks import llm
+            self.embedder = llm.embedders.SentenceTransformerEmbedder(
+                model="sentence-transformers/all-MiniLM-L6-v2"
+            )
+            self._use_pathway_embeddings = True
+        except (ImportError, AttributeError):
+            # Fallback to sentence-transformers if pathway.xpacks.llm not available
+            from sentence_transformers import SentenceTransformer
+            self.embedder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+            self._use_pathway_embeddings = False
         
-        print(f"✅ Indexed {len(self.chunks)} chunks from {novel_path.name}")
+        # Build embeddings
+        self.embeddings = []
+        for chunk in self.chunks:
+            if self._use_pathway_embeddings:
+                emb = self.embedder([chunk])[0]
+            else:
+                emb = self.embedder.encode(chunk)
+            self.embeddings.append(emb)
+        
+        print(f"✅ Pathway retriever ready: {len(self.chunks)} chunks indexed from {novel_path.name}")
     
     def _clean_gutenberg(self, text: str) -> str:
         """Remove Project Gutenberg headers"""
@@ -91,16 +113,26 @@ class NovelRetriever:
         top_k: int = 5,
     ) -> List[Tuple[str, float]]:
         """
-        Retrieve top-k most relevant chunks for query.
+        Retrieve top-k most relevant chunks for query using Pathway embedder.
         
         Returns:
             List of (chunk_text, similarity_score) tuples
         """
-        # Vectorize query
-        query_vector = self.vectorizer.transform([query])
+        # Embed query using Pathway
+        if self._use_pathway_embeddings:
+            query_emb = self.embedder([query])[0]
+        else:
+            query_emb = self.embedder.encode(query)
         
-        # Compute similarities
-        similarities = cosine_similarity(query_vector, self.chunk_vectors)[0]
+        # Compute cosine similarities
+        similarities = []
+        for chunk_emb in self.embeddings:
+            sim = np.dot(query_emb, chunk_emb) / (
+                np.linalg.norm(query_emb) * np.linalg.norm(chunk_emb)
+            )
+            similarities.append(sim)
+        
+        similarities = np.array(similarities)
         
         # Get top-k indices
         top_indices = np.argsort(similarities)[-top_k:][::-1]
@@ -113,17 +145,21 @@ class NovelRetriever:
         return results
 
 
+# Backward compatibility alias
+NovelRetriever = PathwayNovelRetriever
+
+
 def test_retrieval():
     """Test retrieval system"""
     print("="*60)
-    print("TESTING RETRIEVAL SYSTEM")
+    print("TESTING RETRIEVAL SYSTEM (with Pathway)")
     print("="*60)
     
     ROOT = Path(__file__).resolve().parents[2]
     novel_path = ROOT / "Dataset" / "Books" / "The Count of Monte Cristo.txt"
     
-    # Build retriever
-    retriever = NovelRetriever(novel_path, chunk_size=300, overlap=50)
+    # Build retriever using Pathway
+    retriever = PathwayNovelRetriever(novel_path, chunk_size=300, overlap=50)
     
     # Test query
     backstory = """

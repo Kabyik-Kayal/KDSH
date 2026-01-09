@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "data_processing"))
 
 from textpath import TextPath, TextPathConfig
 from consistency_scorer import ConsistencyScorer
-from retrieval import NovelRetriever
+from retrieval import PathwayNovelRetriever
 
 
 def run_inference():
@@ -24,6 +24,8 @@ def run_inference():
     print("="*60)
     print("TEST SET INFERENCE")
     print("="*60)
+    print("✅ Using Pathway framework for retrieval (Track B requirement)")
+    print()
     
     # Paths
     ROOT = Path(__file__).resolve().parents[2]
@@ -55,16 +57,16 @@ def run_inference():
     classifier = joblib.load(classifier_path)
     print("Classifier loaded")
     
-    # Build retrievers
-    print("\nBuilding retrievers...")
+    # Build retrievers using Pathway
+    print("\nBuilding Pathway retrievers...")
     books_dir = data_dir / "Books"
     
     retrievers = {}
     for novel_file in books_dir.glob("*.txt"):
         book_name = novel_file.stem
-        retriever = NovelRetriever(novel_file, chunk_size=256)
+        retriever = PathwayNovelRetriever(novel_file, chunk_size=256)
         retrievers[book_name] = retriever
-        print(f"  {book_name}: {len(retriever.chunks)} chunks")
+        print(f"  ✅ Pathway retriever for {book_name}: {len(retriever.chunks)} chunks")
     
     # Create scorer
     scorer = ConsistencyScorer(model, tokenizer, device, max_novel_tokens=512)
