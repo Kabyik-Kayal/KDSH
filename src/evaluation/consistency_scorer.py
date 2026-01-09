@@ -71,11 +71,16 @@ class ConsistencyScorer:
         backstory_ids = self.tokenizer.encode(backstory).ids
         novel_ids = self.tokenizer.encode(novel_chunk).ids
         
+        # === Baseline: novel alone ===
         # Truncate novel if too long
         if len(novel_ids) > self.max_novel_tokens:
             novel_ids = novel_ids[:self.max_novel_tokens]
-        
-        # === Baseline: novel alone ===
+
+        # Also respect model's max_seq_len
+        max_seq_len = self.model.config.max_seq_len
+        if len(novel_ids) > max_seq_len:
+            novel_ids = novel_ids[:max_seq_len]
+
         novel_tensor = torch.tensor([novel_ids], dtype=torch.long).to(self.device)
         baseline_loss = self.compute_loss(
             novel_tensor[:, :-1],  # input
@@ -84,6 +89,21 @@ class ConsistencyScorer:
         
         # === Primed: backstory + novel ===
         combined_ids = backstory_ids + novel_ids
+
+        # Truncate if exceeds model's max sequence length
+        max_seq_len = self.model.config.max_seq_len  # Should be 512 from training
+        if len(combined_ids) > max_seq_len:
+            # Keep backstory + as much novel as fits
+            backstory_len = len(backstory_ids)
+            available_for_novel = max_seq_len - backstory_len
+            if available_for_novel < 100:  # If backstory too long, truncate it too
+                backstory_ids = backstory_ids[:max_seq_len // 2]
+                novel_ids = novel_ids[:max_seq_len // 2]
+                combined_ids = backstory_ids + novel_ids
+            else:
+                novel_ids = novel_ids[:available_for_novel]
+                combined_ids = backstory_ids + novel_ids
+
         combined_tensor = torch.tensor([combined_ids], dtype=torch.long).to(self.device)
         
         # Compute loss only on the novel portion
