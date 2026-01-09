@@ -26,8 +26,8 @@ def train_classifier():
     
     # Prepare features
     feature_cols = ['delta', 'ppl_ratio', 'baseline_loss', 'primed_loss']
-    X = df[feature_cols].values
-    y = df['label'].values
+    X = df[feature_cols].to_numpy()
+    y = df['label'].to_numpy()
     
     print(f"\nFeatures: {feature_cols}")
     print(f"X shape: {X.shape}")
