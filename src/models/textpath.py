@@ -22,7 +22,13 @@ from bdh import BDH, BDHParameters
 
 @dataclass
 class TextPathConfig:
-    """Configuration for TextPath model"""
+    """Configuration for TextPath model - BDH-based language model
+    
+    BDH Architecture Properties:
+    - Hebbian Learning: Synapses strengthen when neurons co-activate
+    - Sparse Activations: Only ~5% neurons fire (monosemantic representations)
+    - Causal Circuits: Gx = E @ Dx encodes "if A then B" reasoning
+    """
     vocab_size: int = 16384          # From custom tokenizer
     max_seq_len: int = 4096          # Maximum sequence length
     n_heads: int = 8                 # Attention heads
@@ -31,18 +37,28 @@ class TextPathConfig:
     n_layers: int = 4                # Number of BDH layers
     dropout: float = 0.1
     use_rope: bool = True            # Rotary position encoding
-    sparsity_target: float = 0.05    # 5% neuron activation target
+    sparsity_target: float = 0.05    # 5% neuron activation target (BDH's natural operating point)
+    classification_mode: bool = False  # Enable classification head
 
 
 class TextPath(nn.Module):
     """
     BDH-based language model for narrative consistency detection.
     
-    Key features:
-    - Maintains internal synaptic state σ during inference
-    - Sparse neuron activations (~5%) to prevent catastrophic interference
-    - Variable-length sequence handling
-    - State extraction/injection for consistency checking
+    Key BDH Properties Leveraged:
+    - HEBBIAN LEARNING: "Neurons that fire together, wire together"
+      Training on sequential passages builds causal circuits encoding
+      character relationships, plot events, and narrative logic.
+      
+    - SPARSE ACTIVATIONS (~5%): Each concept (character, location, event)
+      activates distinct neuron groups, creating monosemantic representations
+      that make contradictions detectable.
+      
+    - CAUSAL CIRCUITS (Gx = E @ Dx): Learned weights encode reasoning like
+      "If Dantès mentioned → prison/escape concepts should activate"
+      
+    - DYNAMIC SYNAPTIC STATE: Edge weights update during inference,
+      building context-specific working memory.
     """
     
     def __init__(self, config: TextPathConfig):
@@ -65,22 +81,30 @@ class TextPath(nn.Module):
         # Initialize BDH core
         self.bdh = BDH(self.bdh_params)
         
-        # Note: BDH already returns logits over vocab, no extra projection needed
-        # Remove this block:
-        # self.output_proj = nn.Linear(config.d_model, config.vocab_size, bias=False)
-        # self.output_proj.weight = self.bdh.emb.weight
+        # Classification head (if enabled)
+        if config.classification_mode:
+            self.classifier_head = nn.Sequential(
+                nn.LayerNorm(config.d_model),
+                nn.Dropout(config.dropout),
+                nn.Linear(config.d_model, 128),
+                nn.GELU(),
+                nn.Dropout(config.dropout),
+                nn.Linear(128, 2)  # Binary: [Contradict, Consistent]
+            )
         
         print(f"✅ TextPath initialized")
         print(f"   Vocab: {config.vocab_size:,}")
         print(f"   Neurons: {config.n_neurons:,}")
         print(f"   Layers: {config.n_layers}")
+        print(f"   Classification mode: {config.classification_mode}")
         print(f"   Total params: {sum(p.numel() for p in self.parameters()):,}")
     
     def forward(
         self, 
         input_ids: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
-        return_state: bool = False
+        return_state: bool = False,
+        return_embeddings: bool = False
     ) -> Tuple[torch.Tensor, Optional[dict]]:
         """
         Forward pass with optional state extraction.
@@ -89,25 +113,52 @@ class TextPath(nn.Module):
             input_ids: [batch_size, seq_len] token IDs
             attention_mask: [batch_size, seq_len] mask (1=attend, 0=ignore)
             return_state: whether to return internal state
+            return_embeddings: if True, return pooled embeddings (for classification)
             
         Returns:
-            logits: [batch_size, seq_len, vocab_size]
+            If classification_mode:
+                logits: [batch_size, 2] for binary classification
+            Else:
+                logits: [batch_size, seq_len, vocab_size]
             state: optional dict with internal state σ
         """
         # BDH forward pass
-        # Note: The educational BDH might return just logits or (logits, state)
         bdh_out = self.bdh(input_ids)
         
-        # Educational BDH already returns logits over vocab: [B, T, V]
         if isinstance(bdh_out, tuple):
             logits, internal_state = bdh_out
         else:
             logits = bdh_out
             internal_state = None
         
-        # No extra projection; logits are final
+        # Classification mode: pool sequence and classify
+        if self.config.classification_mode:
+            # Get hidden states before final LM projection
+            # Access the internal embeddings from BDH
+            x = self.bdh.emb(input_ids)  # (B, L, D)
+            
+            # Pool sequence: mean over valid tokens
+            if attention_mask is not None:
+                mask_expanded = attention_mask.unsqueeze(-1).expand(x.size())
+                sum_embeddings = torch.sum(x * mask_expanded, dim=1)
+                sum_mask = mask_expanded.sum(dim=1).clamp(min=1e-9)
+                pooled = sum_embeddings / sum_mask  # (B, D)
+            else:
+                pooled = x.mean(dim=1)  # (B, D)
+            
+            if return_embeddings:
+                return pooled, None
+            
+            # Classification logits
+            cls_logits = self.classifier_head(pooled)  # (B, 2)
+            
+            state = None
+            if return_state:
+                state = self.extract_state()
+            
+            return cls_logits, state
         
-        # Extract state if requested
+        # Original LM mode
         state = None
         if return_state:
             state = self.extract_state()

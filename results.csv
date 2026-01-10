@@ -1,61 +1,61 @@
-id,prediction,rationale
-95,0,Inconsistent with character development or plot constraints
-136,1,Backstory provides helpful context (negative delta)
-59,1,Backstory consistent with narrative structure
-60,1,Backstory consistent with narrative structure
-124,0,Inconsistent with character development or plot constraints
-111,0,Inconsistent with character development or plot constraints
-135,0,Inconsistent with character development or plot constraints
-27,1,Backstory consistent with narrative structure
-110,0,Backstory creates misleading expectations (high positive delta)
-42,1,Backstory provides helpful context (negative delta)
-56,1,Backstory provides helpful context (negative delta)
-80,1,Backstory provides helpful context (negative delta)
-28,1,Backstory provides helpful context (negative delta)
-101,0,Backstory creates misleading expectations (high positive delta)
-91,0,Inconsistent with character development or plot constraints
-24,1,Backstory provides helpful context (negative delta)
-119,0,Inconsistent with character development or plot constraints
-93,0,Inconsistent with character development or plot constraints
-72,1,Backstory consistent with narrative structure
-16,1,Backstory consistent with narrative structure
-30,1,Backstory consistent with narrative structure
-97,0,Inconsistent with character development or plot constraints
-22,1,Backstory provides helpful context (negative delta)
-53,1,Backstory consistent with narrative structure
-58,1,Backstory consistent with narrative structure
-81,1,Backstory consistent with narrative structure
-47,1,Backstory consistent with narrative structure
-7,1,Backstory provides helpful context (negative delta)
-121,0,Inconsistent with character development or plot constraints
-129,0,Inconsistent with character development or plot constraints
-51,1,Backstory consistent with narrative structure
-127,0,Inconsistent with character development or plot constraints
-133,0,Inconsistent with character development or plot constraints
-52,1,Backstory consistent with narrative structure
-114,0,Backstory creates misleading expectations (high positive delta)
-2,1,Backstory provides helpful context (negative delta)
-33,1,Backstory consistent with narrative structure
-15,1,Backstory consistent with narrative structure
-82,1,Backstory consistent with narrative structure
-37,1,Backstory consistent with narrative structure
-3,1,Backstory provides helpful context (negative delta)
-103,0,Inconsistent with character development or plot constraints
-94,0,Backstory creates misleading expectations (high positive delta)
-85,1,Backstory consistent with narrative structure
-21,1,Backstory provides helpful context (negative delta)
-49,1,Backstory provides helpful context (negative delta)
-140,1,Backstory provides helpful context (negative delta)
-64,1,Backstory consistent with narrative structure
-131,0,Backstory creates misleading expectations (high positive delta)
-61,1,Backstory provides helpful context (negative delta)
-86,1,Backstory provides helpful context (negative delta)
-38,1,Backstory provides helpful context (negative delta)
-132,0,Inconsistent with character development or plot constraints
-77,1,Backstory provides helpful context (negative delta)
-70,1,Backstory provides helpful context (negative delta)
-115,1,Backstory provides helpful context (negative delta)
-78,1,Backstory provides helpful context (negative delta)
-87,0,Inconsistent with character development or plot constraints
-75,1,Backstory provides helpful context (negative delta)
-44,1,Backstory provides helpful context (negative delta)
+id,label
+2,consistent
+3,consistent
+7,consistent
+15,consistent
+16,consistent
+21,consistent
+22,consistent
+24,consistent
+27,consistent
+28,consistent
+30,consistent
+33,consistent
+37,consistent
+38,consistent
+42,consistent
+44,consistent
+47,consistent
+49,consistent
+51,consistent
+52,consistent
+53,consistent
+56,consistent
+58,consistent
+59,consistent
+60,consistent
+61,consistent
+64,consistent
+70,consistent
+72,consistent
+75,consistent
+77,consistent
+78,consistent
+80,consistent
+81,consistent
+82,consistent
+85,consistent
+86,consistent
+87,contradict
+91,contradict
+93,contradict
+94,contradict
+95,contradict
+97,contradict
+101,contradict
+103,contradict
+110,contradict
+111,contradict
+114,contradict
+115,contradict
+119,contradict
+121,contradict
+124,contradict
+127,contradict
+129,contradict
+131,contradict
+132,contradict
+133,contradict
+135,contradict
+136,contradict
+140,contradict
