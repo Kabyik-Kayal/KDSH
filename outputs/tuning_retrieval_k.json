@@ -3,30 +3,30 @@
     "k": 1,
     "train_accuracy": 0.6375,
     "cv_accuracy": 0.625,
-    "cv_std": 0.06846531968814576
+    "cv_std": 0.14252192813739226
   },
   {
     "k": 3,
-    "train_accuracy": 0.65,
-    "cv_accuracy": 0.6375,
-    "cv_std": 0.08291561975888499
+    "train_accuracy": 0.6375,
+    "cv_accuracy": 0.6,
+    "cv_std": 0.1403121520040228
   },
   {
     "k": 5,
-    "train_accuracy": 0.65,
-    "cv_accuracy": 0.6375,
-    "cv_std": 0.08291561975888499
+    "train_accuracy": 0.6375,
+    "cv_accuracy": 0.6,
+    "cv_std": 0.1403121520040228
   },
   {
     "k": 7,
-    "train_accuracy": 0.65,
-    "cv_accuracy": 0.6375,
-    "cv_std": 0.08291561975888499
+    "train_accuracy": 0.6375,
+    "cv_accuracy": 0.6,
+    "cv_std": 0.1403121520040228
   },
   {
     "k": 10,
-    "train_accuracy": 0.65,
-    "cv_accuracy": 0.6375,
-    "cv_std": 0.08291561975888499
+    "train_accuracy": 0.6375,
+    "cv_accuracy": 0.6,
+    "cv_std": 0.1403121520040228
   }
 ]
