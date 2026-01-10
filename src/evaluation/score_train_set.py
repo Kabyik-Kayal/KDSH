@@ -23,7 +23,7 @@ def score_train_set():
     print("="*60)
     print("SCORING TRAIN SET")
     print("="*60)
-    print("✅ Using Pathway framework for retrieval (Track B requirement)")
+    print("Using Pathway framework for retrieval")
     print()
     
     ROOT = Path(__file__).resolve().parents[2]
@@ -110,7 +110,7 @@ def score_train_set():
     output_path.parent.mkdir(exist_ok=True)
     results_df.to_csv(output_path, index=False)
     
-    print(f"\n✅ Scores saved to {output_path}")
+    print(f"\nScores saved to {output_path}")
     
     # Print summary
     print("\n" + "="*60)
