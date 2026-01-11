@@ -51,6 +51,7 @@ from src.visualization import (
     plot_feature_importance,
     create_evaluation_dashboard
 )
+from src.utils import set_seed
 
 
 
@@ -405,6 +406,9 @@ def main():
     
     # Get configuration
     config = get_config()
+    
+    # Set random seed for reproducibility
+    set_seed(config.seed)
     
     # Override with command-line arguments
     if args.pretrain_epochs != 50:

@@ -53,6 +53,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from src.models.textpath import TextPath, TextPathConfig
+from src.utils import set_seed
 
 
 # ============================================================
@@ -442,6 +443,9 @@ def main():
     print("• Hebbian learning: neurons that fire together, wire together")
     print("• Sparse activations: monosemantic concept neurons")
     print("• Causal circuits: learned narrative reasoning chains\n")
+    
+    # Set random seed for reproducibility
+    set_seed(42)
     
     # Paths
     data_dir = ROOT / "Dataset" / "Books"
