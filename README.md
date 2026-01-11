@@ -47,44 +47,41 @@ Traditional transformers struggle with this task because they need massive train
 ### TextPath: BDH for Text
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                    TextPath Architecture                   │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  Input Tokens [batch, seq_len]                             │
-│      ↓                                                     │
-│  Token Embedding (16K vocab → 256D)                        │
-│      ↓                                                     │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ BDH Layer × 4                                        │  │
-│  │  ┌────────────────────────────────────────────────┐  │  │
-│  │  │ 1. Project to neurons: v → x (ReLU + Sparse)  │  │  │
-│  │  │ 2. Multi-head attention: x × x → a           │  │  │
-│  │  │ 3. Hebbian update: y = (a · Dy) ⊙ x          │  │  │
-│  │  │ 4. Residual: v ← v + y · E                   │  │  │
-│  │  └────────────────────────────────────────────────┘  │  │
-│  └──────────────────────────────────────────────────────┘  │
-│      ↓                                                     │
-│  Language Model Head → Next Token Predictions              │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                    TextPath Architecture                       │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  Input Tokens [batch, seq_len]                                 │
+│      ↓                                                         │
+│  Token Embedding (16K vocab → 256D)                            │
+│      ↓                                                         │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ BDH Layer × 4                                            │  │
+│  │  └─ RoPE Positional Encoding (max_seq_len=4096)          │  │
+│  │                                                          │  │
+│  │  1. Project to neurons: v → x (ReLU + Sparse)            │  │
+│  │  2. Multi-head attention: x × x → a                      │  │
+│  │  3. Hebbian update: y = (a · Dy) ⊙ x                     │  │
+│  │  4. Residual: v ← v + y · E                              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│           ↓                                                    │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Classification Mode (when enabled):                      │  │
+│  │   LayerNorm → Dropout → Linear(256→128) → GELU           │  │
+│  │   → Dropout → Linear(128→2) → [Contradict, Consistent]   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│           OR                                                   │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Language Model Head → Next Token Predictions              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                │
+│  Output: Logits [batch_size, 2] for classification             │
+│          OR Logits [batch_size, seq_len, vocab_size] for LM    │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 **Parameters**: ~8M (compared to 100M+ for equivalent transformers)
-│  │   └─ RoPE Positional Encoding (max_seq_len=4096)               │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-│           ↓                                                          │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ Classification Mode (when enabled):                            │  │
-│  │   LayerNorm → Dropout → Linear(256→128) → GELU                 │  │
-│  │   → Dropout → Linear(128→2) → [Contradict, Consistent]         │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-│                                                                      │
-│  Output: Logits [batch_size, 2] for classification                   │
-│          OR Logits [batch_size, seq_len, vocab_size] for LM          │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-```
 
 ### BDH Biological Properties
 
