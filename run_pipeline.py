@@ -406,10 +406,29 @@ def main():
     
     # Get configuration
     config = get_config()
-    
+
+    # Check and train tokenizer if not present
+    tokenizer_path = config.tokenizer_path
+    if not Path(tokenizer_path).exists():
+        print(f"Tokenizer not found at {tokenizer_path}, training a new one...")
+        from src.data_processing.train_tokenizer import train_custom_tokenizer
+        novels_dir = config.novels_dir
+        novel_paths = [novels_dir / "The Count of Monte Cristo.txt", novels_dir / "In search of the castaways.txt"]
+        missing_files = [p for p in novel_paths if not p.exists()]
+        if missing_files:
+            print("Missing novel files for tokenizer training:")
+            for p in missing_files:
+                print(f"  - {p}")
+            raise FileNotFoundError("Cannot train tokenizer: missing novel files.")
+        train_custom_tokenizer(
+            novel_paths=novel_paths,
+            vocab_size=16384,
+            output_path=Path(tokenizer_path)
+        )
+
     # Set random seed for reproducibility
     set_seed(config.seed)
-    
+
     # Override with command-line arguments
     if args.pretrain_epochs != 50:
         config.pretrain_epochs = args.pretrain_epochs
@@ -419,7 +438,7 @@ def main():
         config.batch_size = args.batch_size
     if args.lr is not None:
         config.learning_rate = args.lr
-    
+
     # Print header
     print("=" * 60)
     print("Narrative Consistency Detection Pipeline")
@@ -427,19 +446,19 @@ def main():
     print("=" * 60)
     print(f"Device: {config.device}")
     print(f"Mode: {args.mode}")
-    
+
     # Pretraining mode
     if args.mode == 'pretrain':
         do_pretraining(config)
         return
-    
+
     # Build retrievers for all other modes
     retrievers = build_pathway_retrievers(
         novels_dir=config.novels_dir,
         chunk_size=config.chunk_size,
         overlap=config.overlap
     )
-    
+
     # Execute requested mode
     if args.mode == 'train':
         do_training(config, retrievers)
@@ -454,7 +473,7 @@ def main():
         do_evaluation(config, retrievers)
         do_visualization(config, retrievers)
         do_prediction(config, retrievers)
-    
+
     print("\n" + "=" * 60)
     print(" Pipeline Complete!")
     print("=" * 60)
