@@ -144,81 +144,66 @@ This forces the BDH model to learn:
 
 ```
 KDSH/
-├── run_pipeline.py                    #  Main CLI entry point (187 lines)
-├── requirements.txt                   # Dependencies (293 packages)
+├── run_pipeline.py                    # Main CLI entry point
+├── requirements.txt                   # Dependencies
 ├── results.csv                        # Final predictions for submission
 ├── LICENSE                            # MIT License
+├── README.md                          # Project documentation
 │
 ├── Dataset/
 │   ├── train.csv                      # 80 labeled training pairs
 │   ├── test.csv                       # Unlabeled test set
 │   ├── Books/
-│   │   ├── The Count of Monte Cristo.txt  (61,676 lines)
-│   │   └── In search of the castaways.txt (18,728 lines)
+│   │   ├── The Count of Monte Cristo.txt
+│   │   └── In search of the castaways.txt
 │   └── entity_threads/                # Character-specific narrative threads
 │       ├── The Count of Monte Cristo/
 │       │   ├── thread_dantès.txt      # Dantès' complete arc
-│       │   ├── thread_villefort.txt
-│       │   ├── thread_fernand.txt
 │       │   └── ... (13 characters)
 │       └── In search of the castaways/
 │           ├── thread_paganel.txt
-│           ├── thread_glenarvan.txt
 │           └── ... (12 characters)
 │
 ├── models/                            # Trained model checkpoints
 │   ├── custom_tokenizer.json          # 16,384 vocab BPE tokenizer
-│   ├── textpath_the_count_of_monte_cristo.pt    # Monte Cristo BDH (~50MB)
-│   ├── textpath_in_search_of_the_castaways.pt   # Castaways BDH (~50MB)
-│   └── calibration_model.pkl          # Logistic regression calibrator (~100KB)
+│   ├── textpath_the_count_of_monte_cristo.pt
+│   ├── textpath_in_search_of_the_castaways.pt
+│   └── calibration_model.pkl          # Logistic regression calibrator
 │
 ├── src/                               # Source code modules
-│   ├── __init__.py                    # Package exports
-│   ├── config.py                      # PipelineConfig dataclass (125 lines)
-│   │
-│   ├── data_processing/               # Data and RAG
-│   │   ├── __init__.py
-│   │   ├── retrieval.py               # PathwayNovelRetriever (186 lines)
-│   │   ├── classification_dataset.py  # PyTorch Dataset
-│   │   ├── build_retrievers.py        # Retriever factory
-│   │   └── entity_threading.py        # Character thread extraction (321 lines)
-│   │   └── train_tokenizer.py         # Custom BPE tokenizer training
-│   │
-│   ├── models/                        # Neural network modules
-│   │   ├── __init__.py
-│   │   ├── textpath.py                # TextPath/BDH core (381 lines)
-│   │   └── pretrain_bdh_native.py     # Hebbian pretraining
-│   │
-│   ├── training/                      # Training infrastructure
-│   │   ├── __init__.py
-│   │   ├── calibration.py             # Logistic regression calibration (353 lines)
-│   │   └── pretraining.py             # Pretraining runner
-│   │
-│   ├── evaluation/                    # Evaluation and prediction
-│   │   ├── __init__.py
-│   │   └── evaluate.py                # Metrics, prediction (431 lines)
+│   ├── config.py                      # Pipeline configuration
 │   │
 │   ├── analysis/                      # Scoring modules
-│   │   ├── __init__.py
-│   │   └── consistency_scorer.py      # Perplexity delta scorer (321 lines)
+│   │   └── consistency_scorer.py      # Perplexity delta scorer
 │   │
-│   ├── visualization/                 # Analysis and plots
-│   │   ├── __init__.py
-│   │   └── visualize.py               # All visualization functions (681 lines)
+│   ├── data_processing/               # Data and RAG
+│   │   ├── build_retrievers.py        # Retriever factory
+│   │   ├── classification_dataset.py  # PyTorch Dataset
+│   │   ├── entity_threading.py        # Character thread extraction
+│   │   ├── retrieval.py               # PathwayNovelRetriever
+│   │   └── train_tokenizer.py         # Custom BPE tokenizer training
 │   │
-│   └── utils/                         # Helper functions
-│       └── __init__.py
+│   ├── evaluation/                    # Evaluation and prediction
+│   │   └── evaluate.py                # Metrics and prediction
+│   │
+│   ├── models/                        # Neural network modules
+│   │   ├── pretrain_bdh_native.py     # Hebbian pretraining
+│   │   └── textpath.py                # TextPath/BDH core architecture
+│   │
+│   ├── training/                      # Training infrastructure
+│   │   ├── calibration.py             # Logistic regression calibration
+│   │   └── pretraining.py             # Pretraining runner
+│   │
+│   ├── utils/                         # Helper functions
+│   │   └── seed.py                    # Reproducibility seeds
+│   │
+│   └── visualization/                 # Analysis and plots
+│       └── visualize.py               # Visualization functions
 │
 ├── visualizations/                    # Generated plots
-│   ├── consistency_embedding_space.png
-│   ├── prediction_confidence.png
-│   ├── accuracy_by_character.png
-│   └── accuracy_by_book.png
-│
 ├── repos/                             # External dependencies
 │   └── bdh_educational/               # Educational BDH implementation
-│       ├── bdh.py                     # Core BDH module (380 lines)
-│       └── __pycache__/
+│       └── bdh.py                     # Core BDH module
 │
 ├── outputs/                           # Training artifacts
 │   └── optimal_config.json            # Best hyperparameters
