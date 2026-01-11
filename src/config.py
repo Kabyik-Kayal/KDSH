@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 # Project root
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 @dataclass
