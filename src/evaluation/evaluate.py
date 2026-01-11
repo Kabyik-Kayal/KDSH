@@ -362,10 +362,9 @@ def run_prediction(
         probabilities.append(prob)
     
     # Create results DataFrame
-    label_map = {0: 'contradict', 1: 'consistent'}
     results = pd.DataFrame({
-        'id': test_df['id'],
-        'label': [label_map[p] for p in predictions]
+        'Story ID': test_df['id'],
+        'Prediction': predictions
     })
     results = results.sort_values('id').reset_index(drop=True)
     
@@ -376,7 +375,7 @@ def run_prediction(
     if verbose:
         print(f"\nPredictions saved to: {output_path}")
         print("\nPrediction distribution:")
-        print(results['label'].value_counts())
+        print(results['Prediction'].value_counts())
     
     return results
 
@@ -400,18 +399,19 @@ def save_predictions(
         DataFrame with predictions
     """
     if label_map is None:
-        label_map = {0: 'contradict', 1: 'consistent'}
+        # User requested format: 1=consistent, 0=inconsistent
+        pass 
     
     results = pd.DataFrame({
-        'id': ids,
-        'label': [label_map[p] for p in predictions]
+        'Story ID': ids,
+        'Prediction': predictions 
     })
     results = results.sort_values('id').reset_index(drop=True)
     results.to_csv(output_path, index=False)
     
     print(f"✅ Predictions saved to {output_path}")
     print("\nPrediction distribution:")
-    print(results['label'].value_counts())
+    print(results['Prediction'].value_counts())
     
     return results
 
