@@ -363,10 +363,10 @@ def run_prediction(
     
     # Create results DataFrame
     results = pd.DataFrame({
-        'Story ID': test_df['id'],
-        'Prediction': predictions
+        'story_id': test_df['id'],
+        'prediction': predictions
     })
-    results = results.sort_values('Story ID').reset_index(drop=True)
+    results = results.sort_values('story_id').reset_index(drop=True)
     
     # Save predictions
     output_path = Path(output_path)
@@ -375,7 +375,7 @@ def run_prediction(
     if verbose:
         print(f"\nPredictions saved to: {output_path}")
         print("\nPrediction distribution:")
-        print(results['Prediction'].value_counts())
+        print(results['prediction'].value_counts())
     
     return results
 
@@ -403,15 +403,15 @@ def save_predictions(
         pass 
     
     results = pd.DataFrame({
-        'Story ID': ids,
-        'Prediction': predictions 
+        'story_id': ids,
+        'prediction': predictions 
     })
-    results = results.sort_values('id').reset_index(drop=True)
+    results = results.sort_values('story_id').reset_index(drop=True)
     results.to_csv(output_path, index=False)
     
-    print(f"✅ Predictions saved to {output_path}")
+    print(f" Predictions saved to {output_path}")
     print("\nPrediction distribution:")
-    print(results['Prediction'].value_counts())
+    print(results['prediction'].value_counts())
     
     return results
 
