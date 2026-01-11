@@ -108,11 +108,11 @@ Instead of using a traditional classification head, we use a **generative reason
 
 If a backstory is **consistent** with a novel, then conditioning the language model on that backstory should **reduce** perplexity when predicting novel passages.
 
-$$\Delta = \text{Loss}(\text{novel} \mid \emptyset) - \text{Loss}(\text{novel} \mid \text{backstory})$$
+$$ \Delta = \text{Loss}(\text{novel} \mid \emptyset) - \text{Loss}(\text{novel} \mid \text{backstory}) $$
 
-- **Positive Δ**: Backstory helps predict novel → **CONSISTENT**
-- **Negative Δ**: Backstory hurts prediction → **CONTRADICTORY**
-- **Near-zero Δ**: Backstory is neutral → **AMBIGUOUS**
+- **Positive $\Delta$**: Backstory helps predict novel → **CONSISTENT**
+- **Negative $\Delta$**: Backstory hurts prediction → **CONTRADICTORY**
+- **Near-zero $\Delta$**: Backstory is neutral → **AMBIGUOUS**
 
 ### Why This Works
 
@@ -599,9 +599,9 @@ Perplexity measures how "surprised" a language model is by a sequence. Lower per
 
 **Intuition**: If a backstory is consistent with a novel, it should *reduce* the model's surprise when reading novel passages.
 
-$$\text{Perplexity}(x) = \exp\left(-\frac{1}{N}\sum_{i=1}^N \log P(x_i | x_{<i})\right)$$
+$$ \text{Perplexity}(x) = \exp\left(-\frac{1}{N} \sum_{i=1}^N \log P(x_i \mid x_{<i})\right) $$
 
-$$\Delta = \text{PPL}(x | \emptyset) - \text{PPL}(x | \text{backstory})$$
+$$ \Delta = \text{PPL}(x \mid \emptyset) - \text{PPL}(x \mid \text{backstory}) $$
 
 **Example**:
 
