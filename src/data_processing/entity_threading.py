@@ -19,35 +19,36 @@ from typing import List, Dict, Optional
 
 
 # Default character lists for the novels in the dataset
+# Use tuples to explicitly group character name variants
 DEFAULT_CHARACTERS = {
     "The Count of Monte Cristo": [
-        "Dantès", "Edmond", "Monte Cristo",  # Protagonist (multiple names)
-        "Villefort",
-        "Fernand", "Mondego",
-        "Danglars",
-        "Mercédès", "Mercedes",  # Love interest
-        "Faria", "Abbé",  # Mentor
-        "Maximilian", "Morrel",  # Allies
-        "Haydée",
-        "Valentine",
-        "Albert",
-        "Caderousse",
-        "Noirtier",
-        "Bertuccio"
+        ("Dantès", ["Dantès", "Edmond", "Monte Cristo"]),  # Protagonist
+        ("Villefort", ["Villefort"]),
+        ("Fernand", ["Fernand", "Mondego"]),
+        ("Danglars", ["Danglars"]),
+        ("Mercédès", ["Mercédès", "Mercedes"]),
+        ("Faria", ["Faria", "Abbé"]),
+        ("Morrel", ["Maximilian", "Morrel"]),
+        ("Haydée", ["Haydée"]),
+        ("Valentine", ["Valentine"]),
+        ("Albert", ["Albert"]),
+        ("Caderousse", ["Caderousse"]),
+        ("Noirtier", ["Noirtier"]),
+        ("Bertuccio", ["Bertuccio"])
     ],
     "In search of the castaways": [
-        "Paganel", "Jacques",  # The geographer
-        "Glenarvan", "Lord", "Edward",  # The protagonist
-        "Thalcave",  # Patagonian guide
-        "Mary", "Grant",  # Grant's daughter
-        "Robert", "Grant",  # Grant's son
-        "Captain", "Grant",  # The missing captain
-        "McNabbs", "Major", "Mac-Nabbs",  # Companions
-        "Ayrton", "Ben", "Joyce",  # The villain
-        "Lady", "Helena",  # Lady Glenarvan
-        "Mulready",
-        "Wilson",
-        "Olbinett"
+        ("Paganel", ["Paganel", "Jacques"]),
+        ("Glenarvan", ["Glenarvan", "Edward"]),
+        ("Thalcave", ["Thalcave"]),
+        ("Mary Grant", ["Mary"]),
+        ("Robert Grant", ["Robert"]),
+        ("Captain Grant", ["Captain Grant", "Harry Grant"]),
+        ("McNabbs", ["McNabbs", "Major", "Mac-Nabbs"]),
+        ("Ayrton", ["Ayrton", "Ben Joyce"]),
+        ("Lady Glenarvan", ["Lady Helena", "Helena"]),
+        ("Mulready", ["Mulready"]),
+        ("Wilson", ["Wilson"]),
+        ("Olbinett", ["Olbinett"])
     ]
 }
 
@@ -171,8 +172,13 @@ def create_character_threads(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Group character names (some characters have multiple name variations)
-    character_groups = _group_character_names(char_list)
+    # Process character list (check if it's tuples or old format)
+    if char_list and isinstance(char_list[0], tuple):
+        # New format: list of (primary_name, [variants])
+        character_groups = {primary: variants for primary, variants in char_list}
+    else:
+        # Old format: flat list - use old grouping logic
+        character_groups = _group_character_names(char_list)
     
     thread_paths = []
     
