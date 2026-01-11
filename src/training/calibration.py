@@ -317,7 +317,17 @@ def run_calibration_training(
     
     # Initialize and load model
     model = TextPath(config)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    
+    # Load state dict, filtering out classifier head weights if not in classification mode
+    checkpoint_state = checkpoint['model_state_dict']
+    if not config.classification_mode:
+        # Remove classifier head weights from checkpoint if they exist
+        checkpoint_state = {
+            k: v for k, v in checkpoint_state.items()
+            if not k.startswith('classifier_head.')
+        }
+    
+    model.load_state_dict(checkpoint_state, strict=False)
     model.to(device)
     model.eval()
     
