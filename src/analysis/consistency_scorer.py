@@ -236,7 +236,7 @@ def load_scorer(
     tokenizer = Tokenizer.from_file(tokenizer_path)
     
     # Load model checkpoint
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     config = checkpoint.get('config')
     
     if config is None:

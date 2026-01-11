@@ -22,19 +22,32 @@ from typing import List, Dict, Optional
 DEFAULT_CHARACTERS = {
     "The Count of Monte Cristo": [
         "Dantès", "Edmond", "Monte Cristo",  # Protagonist (multiple names)
-        "Villefort", "Fernand", "Danglars",  # Antagonists
+        "Villefort",
+        "Fernand", "Mondego",
+        "Danglars",
         "Mercédès", "Mercedes",  # Love interest
         "Faria", "Abbé",  # Mentor
         "Maximilian", "Morrel",  # Allies
-        "Haydée", "Valentine", "Albert"  # Key characters
+        "Haydée",
+        "Valentine",
+        "Albert",
+        "Caderousse",
+        "Noirtier",
+        "Bertuccio"
     ],
     "In search of the castaways": [
         "Paganel", "Jacques",  # The geographer
-        "Glenarvan", "Lord",  # The protagonist
+        "Glenarvan", "Lord", "Edward",  # The protagonist
         "Thalcave",  # Patagonian guide
-        "Mary", "Robert", "Grant",  # Grant family
-        "McNabbs", "Major",  # Companions
-        "Ayrton", "Ben Joyce"  # The villain
+        "Mary", "Grant",  # Grant's daughter
+        "Robert", "Grant",  # Grant's son
+        "Captain", "Grant",  # The missing captain
+        "McNabbs", "Major", "Mac-Nabbs",  # Companions
+        "Ayrton", "Ben", "Joyce",  # The villain
+        "Lady", "Helena",  # Lady Glenarvan
+        "Mulready",
+        "Wilson",
+        "Olbinett"
     ]
 }
 

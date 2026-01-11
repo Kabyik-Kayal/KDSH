@@ -143,7 +143,7 @@ def load_scorer_and_calibration(
     if not model_paths:
         raise FileNotFoundError(f"No pretrained models found in {models_dir}")
     
-    checkpoint = torch.load(model_paths[0], map_location=device)
+    checkpoint = torch.load(model_paths[0], map_location=device, weights_only=False)
     model_config = checkpoint.get('config')
     
     if model_config is None:

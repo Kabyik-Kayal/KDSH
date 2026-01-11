@@ -37,6 +37,20 @@ from src.data_processing import build_pathway_retrievers, create_character_threa
 from src.models.textpath import TextPath, TextPathConfig
 from src.models.pretrain_bdh_native import pretrain_bdh_novel
 from src.evaluation import run_evaluation, run_prediction
+from src.training import (
+    run_calibration_training,
+    load_calibration_model,
+    predict_with_calibration
+)
+from src.training.calibration import _retrieve_chunks
+from src.analysis import ConsistencyScorer
+from src.visualization import (
+    plot_delta_distribution,
+    plot_confusion_matrix,
+    plot_calibration_curve,
+    plot_feature_importance,
+    create_evaluation_dashboard
+)
 
 
 
@@ -106,7 +120,7 @@ def do_pretraining(config: PipelineConfig):
         thread_paths = create_character_threads(
             novel_path=novel_path,
             output_dir=novel_threads_dir,
-            min_paragraphs=10
+            min_paragraphs=3
         )
         
         # Step 2: Pretrain with mixed data (novel + threads)
@@ -205,7 +219,7 @@ def do_visualization(config: PipelineConfig, retrievers: dict):
     if not model_paths:
         raise FileNotFoundError(f"No pretrained models found in {config.models_dir}")
     
-    checkpoint = torch.load(model_paths[0], map_location=config.device)
+    checkpoint = torch.load(model_paths[0], map_location=config.device, weights_only=False)
     model_config = checkpoint.get('config')
     if model_config is None:
         model_config = TextPathConfig(

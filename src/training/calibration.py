@@ -304,7 +304,7 @@ def run_calibration_training(
     model_path = pretrained_paths[0]
     print(f"Loading pretrained model: {model_path.name}")
     
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     config = checkpoint.get('config')
     
     if config is None:
