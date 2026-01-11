@@ -366,7 +366,7 @@ def run_prediction(
         'Story ID': test_df['id'],
         'Prediction': predictions
     })
-    results = results.sort_values('id').reset_index(drop=True)
+    results = results.sort_values('Story ID').reset_index(drop=True)
     
     # Save predictions
     output_path = Path(output_path)
