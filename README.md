@@ -182,6 +182,7 @@ KDSH/
 │   │   ├── classification_dataset.py  # PyTorch Dataset
 │   │   ├── build_retrievers.py        # Retriever factory
 │   │   └── entity_threading.py        # Character thread extraction (321 lines)
+│   │   └── train_tokenizer.py         # Custom BPE tokenizer training
 │   │
 │   ├── models/                        # Neural network modules
 │   │   ├── __init__.py
