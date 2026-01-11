@@ -67,52 +67,104 @@ class BDHNovelDataset(Dataset):
     - Small stride (high overlap) ensures every narrative relationship is seen many times
     - Sequential passages maintain temporal/causal ordering of events
     - Complete coverage ensures all characters and events are learned
+    - Entity threads ensure character arcs are learned as continuous sequences
+    
+    Supports mixed data training:
+    - Novel paths: List of paths to novel text files
+    - Thread weight: How much to oversample entity thread chunks (default: 2.0)
     """
     
     def __init__(
         self,
-        novel_path: Path,
+        novel_paths: list,  # Changed from single Path to list of paths
         tokenizer: Tokenizer,
         chunk_size: int = 512,
         stride: int = 64,  # Small stride = high overlap = more Hebbian co-activation
+        thread_weight: float = 2.0,  # Weight for thread chunks (higher priority)
     ):
         self.tokenizer = tokenizer
         self.chunk_size = chunk_size
-        self.novel_name = novel_path.stem
+        self.thread_weight = thread_weight
         
-        print(f"\n📖 Loading: {novel_path.name}")
-        with open(novel_path, 'r', encoding='utf-8') as f:
+        # Handle single path (backward compatibility)
+        if isinstance(novel_paths, (str, Path)):
+            novel_paths = [Path(novel_paths)]
+        else:
+            novel_paths = [Path(p) for p in novel_paths]
+        
+        self.novel_paths = novel_paths
+        
+        # Separate novel files from thread files
+        novel_files = [p for p in novel_paths if not p.name.startswith('thread_')]
+        thread_files = [p for p in novel_paths if p.name.startswith('thread_')]
+        
+        # Get novel name from first novel file
+        if novel_files:
+            self.novel_name = novel_files[0].stem
+        else:
+            self.novel_name = "mixed"
+        
+        self.chunks = []
+        self.entities = []
+        
+        # Process novel files
+        for novel_path in novel_files:
+            novel_chunks, novel_entities = self._process_file(novel_path, stride, is_thread=False)
+            self.chunks.extend(novel_chunks)
+            self.entities.extend(novel_entities)
+        
+        novel_chunk_count = len(self.chunks)
+        
+        # Process thread files with weighting (oversample)
+        for thread_path in thread_files:
+            thread_chunks, _ = self._process_file(thread_path, stride, is_thread=True)
+            
+            # Apply thread weighting by duplicating chunks
+            weight_multiplier = int(self.thread_weight)
+            for _ in range(weight_multiplier):
+                self.chunks.extend(thread_chunks)
+        
+        thread_chunk_count = len(self.chunks) - novel_chunk_count
+        
+        print(f"   📦 Total: {len(self.chunks):,} chunks ({novel_chunk_count:,} novel + {thread_chunk_count:,} thread)")
+    
+    def _process_file(self, file_path: Path, stride: int, is_thread: bool = False):
+        """Process a single file and return chunks and entities."""
+        file_type = "🧵 Thread" if is_thread else "📖 Novel"
+        print(f"\n{file_type}: {file_path.name}")
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
             text = f.read()
         
-        text = self._clean_gutenberg(text)
-        self.full_text = text
+        # Clean Gutenberg headers (only for novels)
+        if not is_thread:
+            text = self._clean_gutenberg(text)
         
-        # Extract key entities for logging
-        self.entities = self._extract_entities(text)
-        print(f"   📍 Key entities: {', '.join(self.entities[:10])}...")
+        # Extract entities (only for novels)
+        entities = []
+        if not is_thread:
+            entities = self._extract_entities(text)
+            print(f"   📍 Key entities: {', '.join(entities[:10])}...")
         
-        # Tokenize entire novel
-        encoding = tokenizer.encode(text)
-        self.token_ids = encoding.ids
-        print(f"   📝 {len(self.token_ids):,} tokens")
+        # Tokenize
+        encoding = self.tokenizer.encode(text)
+        token_ids = encoding.ids
+        print(f"   📝 {len(token_ids):,} tokens")
         
-        # Create sequential chunks for LM training
-        # Small stride ensures high overlap = more Hebbian co-activation opportunities
-        self.chunks = []
-        for i in range(0, len(self.token_ids) - chunk_size + 1, stride):
-            self.chunks.append(self.token_ids[i:i + chunk_size])
+        # Create sequential chunks
+        chunks = []
+        for i in range(0, len(token_ids) - self.chunk_size + 1, stride):
+            chunks.append(token_ids[i:i + self.chunk_size])
         
-        # Add final chunk to ensure complete coverage
-        if len(self.token_ids) >= chunk_size:
-            final_chunk = self.token_ids[-chunk_size:]
-            if final_chunk != self.chunks[-1]:
-                self.chunks.append(final_chunk)
+        # Add final chunk for complete coverage
+        if len(token_ids) >= self.chunk_size:
+            final_chunk = token_ids[-self.chunk_size:]
+            if chunks and final_chunk != chunks[-1]:
+                chunks.append(final_chunk)
         
-        # Calculate coverage stats
-        tokens_per_epoch = len(self.chunks) * chunk_size
-        coverage_ratio = tokens_per_epoch / len(self.token_ids)
+        print(f"   📦 {len(chunks):,} chunks")
         
-        print(f"   📦 {len(self.chunks):,} chunks (stride={stride}, {coverage_ratio:.1f}x coverage)")
+        return chunks, entities
     
     def _clean_gutenberg(self, text: str) -> str:
         """Remove Project Gutenberg headers/footers"""
@@ -277,14 +329,21 @@ def pretrain_bdh_novel(
     epochs: int = 50,
     batch_size: int = 4,
     learning_rate: float = 1e-4,
+    thread_paths: list = None,  # NEW: Optional list of entity thread file paths
+    thread_weight: float = 2.0,  # NEW: Weight for thread chunks
 ):
     """
-    Pretrain BDH on a single novel.
+    Pretrain BDH on a single novel with optional entity threads.
     
     Language modeling on sequential text enables:
     - Hebbian learning: co-occurring concepts strengthen connections
     - Causal circuits: "if A then B" reasoning patterns
     - Sparse representations: monosemantic neurons for characters/places
+    
+    Entity Threading (NEW):
+    - Character-specific threads are extracted from the novel
+    - These threads capture long-term character arcs
+    - Thread chunks are weighted higher during training
     """
     novel_name = novel_path.stem
     
@@ -295,12 +354,19 @@ def pretrain_bdh_novel(
     # Load tokenizer
     tokenizer = Tokenizer.from_file(str(tokenizer_path))
     
+    # Build list of all paths (novel + threads)
+    all_paths = [novel_path]
+    if thread_paths:
+        all_paths.extend(thread_paths)
+        print(f"   🧵 Including {len(thread_paths)} entity threads")
+    
     # Create dataset with high overlap for Hebbian learning
     dataset = BDHNovelDataset(
-        novel_path=novel_path,
+        novel_paths=all_paths,
         tokenizer=tokenizer,
         chunk_size=config.max_seq_len,
         stride=64,  # Small stride = high overlap = more co-activation
+        thread_weight=thread_weight,
     )
     
     dataloader = DataLoader(

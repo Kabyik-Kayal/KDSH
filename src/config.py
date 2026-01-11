@@ -27,7 +27,7 @@ class PipelineConfig:
     test_csv: Path = field(default_factory=lambda: ROOT / 'Dataset' / 'test.csv')
     tokenizer_path: Path = field(default_factory=lambda: ROOT / 'models' / 'custom_tokenizer.json')
     models_dir: Path = field(default_factory=lambda: ROOT / 'models')
-    output_model: Path = field(default_factory=lambda: ROOT / 'models' / 'textpath_classifier_best.pt')
+    output_model: Path = field(default_factory=lambda: ROOT / 'models' / 'calibration_model.pkl')
     output_predictions: Path = field(default_factory=lambda: ROOT / 'results.csv')
     
     # ========================================

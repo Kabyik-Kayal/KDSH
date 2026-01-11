@@ -1,143 +1,381 @@
 """
-Evaluation utilities for TextPath consistency classification.
-Provides functions for model evaluation, prediction, and metrics.
+Evaluation Module for Generative Reasoning
+===========================================
+Modular evaluation utilities for the Perplexity Delta scoring approach.
+
+Provides:
+- run_evaluation: Evaluate model on validation set
+- run_prediction: Generate predictions on test set
+- compute_metrics: Calculate accuracy, F1, precision, recall
+- save_predictions: Save predictions to CSV
 """
 
 import sys
 from pathlib import Path
+from typing import Dict, List, Tuple, Optional
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    classification_report,
+    confusion_matrix
+)
+
+import torch
+from tokenizers import Tokenizer
+
+# Add project root to path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import torch
-import pandas as pd
-import numpy as np
-from torch.utils.data import DataLoader, random_split
-from sklearn.metrics import (
-    accuracy_score, 
-    classification_report, 
-    f1_score,
-    confusion_matrix,
-    precision_recall_fscore_support
+from src.models.textpath import TextPath, TextPathConfig
+from src.analysis.consistency_scorer import ConsistencyScorer
+from src.training.calibration import (
+    load_calibration_model,
+    predict_with_calibration,
+    _retrieve_chunks
 )
-from tqdm import tqdm
-from typing import Dict, List, Tuple, Optional
-
-from src.data_processing.classification_dataset import ConsistencyDataset
-from src.models.textpath_classifier import NovelSpecificClassifier
 
 
-def evaluate_model(
-    model: NovelSpecificClassifier,
-    dataloader: DataLoader,
-    device: str
+# ============================================================
+# Metrics Computation
+# ============================================================
+
+def compute_metrics(
+    y_true: List[int],
+    y_pred: List[int],
+    class_names: List[str] = None
 ) -> Dict:
     """
-    Evaluate a trained model on a dataset.
+    Compute comprehensive evaluation metrics.
     
     Args:
-        model: Trained NovelSpecificClassifier
-        dataloader: DataLoader for evaluation data
-        device: Device to run evaluation on
+        y_true: True labels
+        y_pred: Predicted labels
+        class_names: Names for classes (default: ['Contradictory', 'Consistent'])
         
     Returns:
         Dictionary with metrics: accuracy, f1, precision, recall, 
-        confusion_matrix, and classification_report
+        confusion_matrix, classification_report
     """
-    model.eval()
+    if class_names is None:
+        class_names = ['Contradictory', 'Consistent']
     
-    all_preds = []
-    all_labels = []
-    all_probs = []
-    
-    with torch.no_grad():
-        for batch in tqdm(dataloader, desc='Evaluating'):
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels']
-            book_names = batch['book_name']
-            
-            logits = model.forward_grouped(input_ids, attention_mask, book_names)
-            probs = torch.softmax(logits, dim=1)
-            preds = torch.argmax(logits, dim=1)
-            
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.numpy())
-            all_probs.extend(probs[:, 1].cpu().numpy())
-    
-    # Calculate metrics
-    accuracy = accuracy_score(all_labels, all_preds)
-    f1 = f1_score(all_labels, all_preds, average='weighted')
-    precision, recall, _, _ = precision_recall_fscore_support(
-        all_labels, all_preds, average='weighted'
-    )
-    conf_matrix = confusion_matrix(all_labels, all_preds)
-    report = classification_report(
-        all_labels, all_preds, 
-        target_names=['Contradict', 'Consistent'],
-        output_dict=True
-    )
-    
-    return {
-        'accuracy': accuracy,
-        'f1': f1,
-        'precision': precision,
-        'recall': recall,
-        'confusion_matrix': conf_matrix,
-        'classification_report': report,
-        'predictions': all_preds,
-        'labels': all_labels,
-        'probabilities': all_probs
+    metrics = {
+        'accuracy': accuracy_score(y_true, y_pred),
+        'f1': f1_score(y_true, y_pred, average='weighted'),
+        'f1_macro': f1_score(y_true, y_pred, average='macro'),
+        'precision': precision_score(y_true, y_pred, average='weighted'),
+        'recall': recall_score(y_true, y_pred, average='weighted'),
+        'confusion_matrix': confusion_matrix(y_true, y_pred),
+        'classification_report': classification_report(
+            y_true, y_pred,
+            target_names=class_names,
+            output_dict=True
+        ),
+        'classification_report_str': classification_report(
+            y_true, y_pred,
+            target_names=class_names
+        )
     }
+    
+    return metrics
 
 
-def predict_batch(
-    model: NovelSpecificClassifier,
-    dataloader: DataLoader,
-    device: str
-) -> Tuple[List[int], List[int], List[float]]:
+def print_metrics(metrics: Dict, title: str = "EVALUATION RESULTS"):
     """
-    Generate predictions for a batch of samples.
+    Print formatted evaluation metrics.
     
     Args:
-        model: Trained NovelSpecificClassifier
-        dataloader: DataLoader for prediction data
-        device: Device to run prediction on
+        metrics: Dictionary from compute_metrics()
+        title: Title for the report
+    """
+    print("\n" + "=" * 60)
+    print(title)
+    print("=" * 60)
+    
+    print(f"\nAccuracy:  {metrics['accuracy']:.4f}")
+    print(f"F1 Score:  {metrics['f1']:.4f}")
+    print(f"Precision: {metrics['precision']:.4f}")
+    print(f"Recall:    {metrics['recall']:.4f}")
+    
+    print("\nConfusion Matrix:")
+    cm = metrics['confusion_matrix']
+    print(f"              Predicted")
+    print(f"            Contra  Consist")
+    print(f"Actual Contra  {cm[0, 0]:4d}    {cm[0, 1]:4d}")
+    print(f"       Consist {cm[1, 0]:4d}    {cm[1, 1]:4d}")
+    
+    print("\nClassification Report:")
+    print(metrics['classification_report_str'])
+
+
+# ============================================================
+# Model Loading Utilities
+# ============================================================
+
+def load_scorer_and_calibration(
+    models_dir: Path,
+    tokenizer_path: Path,
+    device: str
+) -> Tuple[ConsistencyScorer, object]:
+    """
+    Load the ConsistencyScorer and calibration model.
+    
+    Args:
+        models_dir: Directory containing pretrained models
+        tokenizer_path: Path to tokenizer JSON
+        device: Device to load models on
         
     Returns:
-        Tuple of (ids, predictions, probabilities)
+        Tuple of (ConsistencyScorer, calibration_model)
     """
+    # Load tokenizer
+    tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    
+    # Load pretrained BDH model
+    model_paths = list(models_dir.glob("textpath_*.pt"))
+    if not model_paths:
+        raise FileNotFoundError(f"No pretrained models found in {models_dir}")
+    
+    checkpoint = torch.load(model_paths[0], map_location=device)
+    model_config = checkpoint.get('config')
+    
+    if model_config is None:
+        model_config = TextPathConfig(
+            vocab_size=tokenizer.get_vocab_size(),
+            classification_mode=False
+        )
+    else:
+        model_config.classification_mode = False
+    
+    model = TextPath(model_config)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(device)
     model.eval()
     
-    all_ids = []
-    all_preds = []
-    all_probs = []
+    # Create scorer
+    scorer = ConsistencyScorer(
+        model=model,
+        tokenizer=tokenizer,
+        device=device
+    )
     
-    with torch.no_grad():
-        for batch in tqdm(dataloader, desc='Predicting'):
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            book_names = batch['book_name']
-            ids = batch['id']
-            
-            logits = model.forward_grouped(input_ids, attention_mask, book_names)
-            probs = torch.softmax(logits, dim=1)
-            preds = torch.argmax(logits, dim=1)
-            
-            if torch.is_tensor(ids):
-                all_ids.extend(ids.numpy())
-            else:
-                all_ids.extend(ids)
-            all_preds.extend(preds.cpu().numpy())
-            all_probs.extend(probs[:, 1].cpu().numpy())
+    # Load calibration model
+    calibration_path = models_dir / "calibration_model.pkl"
+    if not calibration_path.exists():
+        raise FileNotFoundError(f"Calibration model not found: {calibration_path}")
     
-    return all_ids, all_preds, all_probs
+    calibration_model = load_calibration_model(str(calibration_path))
+    
+    return scorer, calibration_model
+
+
+# ============================================================
+# Evaluation Functions
+# ============================================================
+
+def run_evaluation(
+    models_dir: str,
+    train_csv: str,
+    tokenizer_path: str,
+    retrievers: dict,
+    device: str,
+    top_k_retrieval: int = 2,
+    val_ratio: float = 0.2,
+    verbose: bool = True
+) -> Dict:
+    """
+    Run evaluation on validation set using Perplexity Delta scoring.
+    
+    Args:
+        models_dir: Directory containing pretrained models
+        train_csv: Path to training CSV
+        tokenizer_path: Path to tokenizer JSON
+        retrievers: Dictionary of PathwayNovelRetriever instances
+        device: Device to run on
+        top_k_retrieval: Number of chunks to retrieve
+        val_ratio: Proportion of data to use for validation
+        verbose: Whether to print progress and results
+        
+    Returns:
+        Dictionary with metrics and prediction details
+    """
+    if verbose:
+        print("\n" + "=" * 60)
+        print("RUNNING EVALUATION")
+        print("=" * 60)
+    
+    models_dir = Path(models_dir)
+    
+    # Load scorer and calibration model
+    scorer, calibration_model = load_scorer_and_calibration(
+        models_dir=models_dir,
+        tokenizer_path=Path(tokenizer_path),
+        device=device
+    )
+    
+    # Load validation data
+    train_df = pd.read_csv(train_csv)
+    val_size = int(val_ratio * len(train_df))
+    val_df = train_df.tail(val_size).reset_index(drop=True)
+    
+    if verbose:
+        print(f"Evaluating on {len(val_df)} validation samples")
+    
+    # Run evaluation
+    predictions = []
+    labels = []
+    probabilities = []
+    deltas = []
+    features = []
+    
+    iterator = tqdm(val_df.iterrows(), total=len(val_df), desc="Evaluating") if verbose else val_df.iterrows()
+    
+    for idx, row in iterator:
+        backstory = row['content']
+        novel_name = row['book_name']
+        true_label = 1 if row['label'] == 'consistent' else 0
+        
+        # Retrieve chunks
+        chunks, scores = _retrieve_chunks(
+            backstory, novel_name, retrievers, top_k_retrieval
+        )
+        
+        # Get features and prediction
+        if chunks:
+            feature_vec = scorer.get_features(backstory, chunks, scores)
+            pred, prob = predict_with_calibration(
+                scorer, calibration_model, backstory, chunks, scores
+            )
+        else:
+            feature_vec = [0.0, 0.0, 0.0, 0.0]
+            pred, prob = 1, 0.5
+        
+        predictions.append(pred)
+        labels.append(true_label)
+        probabilities.append(prob)
+        deltas.append(feature_vec[0])  # delta_mean
+        features.append(feature_vec)
+    
+    # Compute metrics
+    metrics = compute_metrics(labels, predictions)
+    
+    if verbose:
+        print_metrics(metrics)
+    
+    # Add extra details
+    metrics['predictions'] = predictions
+    metrics['labels'] = labels
+    metrics['probabilities'] = probabilities
+    metrics['deltas'] = deltas
+    metrics['features'] = np.array(features)
+    
+    return metrics
+
+
+def run_prediction(
+    models_dir: str,
+    test_csv: str,
+    tokenizer_path: str,
+    retrievers: dict,
+    device: str,
+    output_path: str,
+    top_k_retrieval: int = 2,
+    verbose: bool = True
+) -> pd.DataFrame:
+    """
+    Generate predictions on test set.
+    
+    Args:
+        models_dir: Directory containing pretrained models
+        test_csv: Path to test CSV
+        tokenizer_path: Path to tokenizer JSON
+        retrievers: Dictionary of PathwayNovelRetriever instances
+        device: Device to run on
+        output_path: Path to save predictions CSV
+        top_k_retrieval: Number of chunks to retrieve
+        verbose: Whether to print progress
+        
+    Returns:
+        DataFrame with predictions
+    """
+    if verbose:
+        print("\n" + "=" * 60)
+        print("GENERATING PREDICTIONS")
+        print("=" * 60)
+    
+    models_dir = Path(models_dir)
+    
+    # Load scorer and calibration model
+    scorer, calibration_model = load_scorer_and_calibration(
+        models_dir=models_dir,
+        tokenizer_path=Path(tokenizer_path),
+        device=device
+    )
+    
+    # Load test data
+    test_df = pd.read_csv(test_csv)
+    
+    if verbose:
+        print(f"Predicting on {len(test_df)} test samples")
+    
+    # Generate predictions
+    predictions = []
+    probabilities = []
+    
+    iterator = tqdm(test_df.iterrows(), total=len(test_df), desc="Predicting") if verbose else test_df.iterrows()
+    
+    for idx, row in iterator:
+        backstory = row['content']
+        novel_name = row['book_name']
+        
+        # Retrieve chunks
+        chunks, scores = _retrieve_chunks(
+            backstory, novel_name, retrievers, top_k_retrieval
+        )
+        
+        # Predict
+        if chunks:
+            pred, prob = predict_with_calibration(
+                scorer, calibration_model, backstory, chunks, scores
+            )
+        else:
+            pred, prob = 1, 0.5
+        
+        predictions.append(pred)
+        probabilities.append(prob)
+    
+    # Create results DataFrame
+    label_map = {0: 'contradict', 1: 'consistent'}
+    results = pd.DataFrame({
+        'id': test_df['id'],
+        'label': [label_map[p] for p in predictions]
+    })
+    results = results.sort_values('id').reset_index(drop=True)
+    
+    # Save predictions
+    output_path = Path(output_path)
+    results.to_csv(output_path, index=False)
+    
+    if verbose:
+        print(f"\nPredictions saved to: {output_path}")
+        print("\nPrediction distribution:")
+        print(results['label'].value_counts())
+    
+    return results
 
 
 def save_predictions(
     ids: List[int],
     predictions: List[int],
     output_path: str,
-    label_map: Optional[Dict[int, str]] = None
+    label_map: Dict[int, str] = None
 ) -> pd.DataFrame:
     """
     Save predictions to CSV file.
@@ -168,191 +406,15 @@ def save_predictions(
     return results
 
 
-def print_evaluation_report(metrics: Dict, title: str = "EVALUATION RESULTS"):
-    """
-    Print a formatted evaluation report.
-    
-    Args:
-        metrics: Dictionary from evaluate_model()
-        title: Report title
-    """
-    print("\n" + "="*60)
-    print(title)
-    print("="*60)
-    
-    print(f"\nAccuracy:  {metrics['accuracy']:.4f}")
-    print(f"F1 Score:  {metrics['f1']:.4f}")
-    print(f"Precision: {metrics['precision']:.4f}")
-    print(f"Recall:    {metrics['recall']:.4f}")
-    
-    print("\nConfusion Matrix:")
-    cm = metrics['confusion_matrix']
-    print(f"              Predicted")
-    print(f"            Contra  Consist")
-    print(f"Actual Contra  {cm[0,0]:4d}    {cm[0,1]:4d}")
-    print(f"       Consist {cm[1,0]:4d}    {cm[1,1]:4d}")
-    
-    print("\nClassification Report:")
-    report = metrics['classification_report']
-    print(f"{'Class':<12} {'Precision':>10} {'Recall':>10} {'F1':>10} {'Support':>10}")
-    print("-" * 52)
-    for cls in ['Contradict', 'Consistent']:
-        r = report[cls]
-        print(f"{cls:<12} {r['precision']:>10.4f} {r['recall']:>10.4f} {r['f1-score']:>10.4f} {r['support']:>10.0f}")
+# ============================================================
+# Exports
+# ============================================================
 
-
-def run_full_evaluation(
-    models_dir: str,
-    train_csv: str,
-    novels_dir: str,
-    tokenizer_path: str,
-    retrievers: Dict,
-    device: str,
-    max_tokens: int = 512,
-    top_k_retrieval: int = 2,
-    output_model_path: Optional[str] = None
-) -> Dict:
-    """
-    Run complete evaluation pipeline on validation set.
-    
-    Args:
-        models_dir: Directory containing trained models
-        train_csv: Path to training CSV (will use 20% as validation)
-        novels_dir: Directory containing novel text files
-        tokenizer_path: Path to tokenizer JSON
-        retrievers: Dictionary of PathwayNovelRetriever instances
-        device: Device to run on
-        max_tokens: Maximum sequence length
-        top_k_retrieval: Number of chunks to retrieve
-        output_model_path: Optional path to load specific checkpoint
-        
-    Returns:
-        Dictionary with evaluation metrics
-    """
-    print("\n" + "="*60)
-    print("FULL EVALUATION")
-    print("="*60)
-    
-    # Load validation dataset
-    dataset = ConsistencyDataset(
-        csv_path=train_csv,
-        novel_dir=novels_dir,
-        tokenizer_path=tokenizer_path,
-        retriever=retrievers,
-        max_tokens=max_tokens,
-        mode='train',
-        top_k_retrieval=top_k_retrieval
-    )
-    
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    _, val_dataset = random_split(
-        dataset, [train_size, val_size],
-        generator=torch.Generator().manual_seed(42)
-    )
-    
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=0)
-    print(f"✅ Loaded {len(val_dataset)} validation samples")
-    
-    # Load model
-    model = NovelSpecificClassifier(
-        models_dir=models_dir,
-        device=device,
-        freeze_bdh=False
-    )
-    
-    if output_model_path:
-        model.load(output_model_path)
-    
-    model.eval()
-    
-    # Evaluate
-    metrics = evaluate_model(model, val_loader, device)
-    print_evaluation_report(metrics)
-    
-    return metrics
-
-
-def run_test_prediction(
-    models_dir: str,
-    test_csv: str,
-    novels_dir: str,
-    tokenizer_path: str,
-    retrievers: Dict,
-    device: str,
-    output_path: str,
-    max_tokens: int = 512,
-    top_k_retrieval: int = 2,
-    output_model_path: Optional[str] = None
-) -> pd.DataFrame:
-    """
-    Generate predictions for test set.
-    
-    Args:
-        models_dir: Directory containing trained models
-        test_csv: Path to test CSV
-        novels_dir: Directory containing novel text files
-        tokenizer_path: Path to tokenizer JSON
-        retrievers: Dictionary of PathwayNovelRetriever instances
-        device: Device to run on
-        output_path: Path to save predictions CSV
-        max_tokens: Maximum sequence length
-        top_k_retrieval: Number of chunks to retrieve
-        output_model_path: Optional path to load specific checkpoint
-        
-    Returns:
-        DataFrame with predictions
-    """
-    print("\n" + "="*60)
-    print("GENERATING PREDICTIONS")
-    print("="*60)
-    
-    # Load test dataset
-    test_dataset = ConsistencyDataset(
-        csv_path=test_csv,
-        novel_dir=novels_dir,
-        tokenizer_path=tokenizer_path,
-        retriever=retrievers,
-        max_tokens=max_tokens,
-        mode='test',
-        top_k_retrieval=top_k_retrieval
-    )
-    
-    test_loader = DataLoader(
-        test_dataset, 
-        batch_size=8, 
-        shuffle=False,
-        num_workers=0
-    )
-    print(f"✅ Loaded {len(test_dataset)} test samples")
-    
-    # Load model
-    model = NovelSpecificClassifier(
-        models_dir=models_dir,
-        device=device,
-        freeze_bdh=False
-    )
-    
-    if output_model_path:
-        model.load(output_model_path)
-    
-    model.eval()
-    
-    # Generate predictions
-    ids, preds, probs = predict_batch(model, test_loader, device)
-    
-    # Save results
-    results = save_predictions(ids, preds, output_path)
-    
-    return results
-
-
-# Export functions
 __all__ = [
-    'evaluate_model',
-    'predict_batch',
-    'save_predictions',
-    'print_evaluation_report',
-    'run_full_evaluation',
-    'run_test_prediction'
+    'compute_metrics',
+    'print_metrics',
+    'load_scorer_and_calibration',
+    'run_evaluation',
+    'run_prediction',
+    'save_predictions'
 ]

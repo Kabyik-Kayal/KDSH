@@ -1,11 +1,22 @@
 """
-Evaluation module for TextPath classifier.
+Evaluation module for Generative Reasoning.
+Provides modular evaluation and prediction utilities.
 """
+
 from .evaluate import (
-    evaluate_model,
-    predict_batch,
-    save_predictions,
-    print_evaluation_report,
-    run_full_evaluation,
-    run_test_prediction
+    compute_metrics,
+    print_metrics,
+    load_scorer_and_calibration,
+    run_evaluation,
+    run_prediction,
+    save_predictions
 )
+
+__all__ = [
+    'compute_metrics',
+    'print_metrics',
+    'load_scorer_and_calibration',
+    'run_evaluation',
+    'run_prediction',
+    'save_predictions'
+]

@@ -255,6 +255,71 @@ class TextPath(nn.Module):
         perplexity = torch.exp(loss)
         
         return perplexity
+    
+    def calculate_conditional_loss(
+        self,
+        context_ids: torch.Tensor,
+        target_ids: torch.Tensor
+    ) -> float:
+        """
+        Calculate cross-entropy loss on target tokens conditioned on context.
+        Used for Perplexity Delta scoring in the Generative Reasoning approach.
+        
+        Theory:
+        - If backstory (context) is consistent with novel (target), conditioning
+          on it should REDUCE the model's loss on target tokens.
+        - Delta = Loss(target | empty) - Loss(target | context)
+        - Positive delta = Consistent backstory
+        
+        Args:
+            context_ids: [batch_size, context_len] - context tokens (backstory)
+            target_ids: [batch_size, target_len] - target tokens (novel chunk)
+            
+        Returns:
+            Mean cross-entropy loss on target portion only (float)
+        """
+        self.eval()
+        
+        with torch.no_grad():
+            # Handle empty context case
+            if context_ids.numel() == 0 or context_ids.size(1) == 0:
+                # No context - just compute loss on target
+                logits, _ = self.forward(target_ids[:, :-1])
+                targets = target_ids[:, 1:]
+                loss = F.cross_entropy(
+                    logits.reshape(-1, self.config.vocab_size),
+                    targets.reshape(-1),
+                    reduction='mean'
+                )
+                return loss.item()
+            
+            # Concatenate context and target
+            full_input = torch.cat([context_ids, target_ids], dim=1)
+            
+            # Forward pass (exclude last token for next-token prediction)
+            logits, _ = self.forward(full_input[:, :-1])
+            
+            # Create targets (shifted by 1)
+            targets = full_input[:, 1:]
+            
+            # Create mask: 1 for target tokens, 0 for context tokens
+            # After shifting, target portion starts at (context_len - 1)
+            context_len = context_ids.size(1)
+            mask = torch.zeros_like(targets, dtype=torch.float, device=targets.device)
+            mask[:, context_len - 1:] = 1.0
+            
+            # Compute per-token loss
+            loss_unreduced = F.cross_entropy(
+                logits.reshape(-1, self.config.vocab_size),
+                targets.reshape(-1),
+                reduction='none'
+            )
+            loss_unreduced = loss_unreduced.view(targets.shape)
+            
+            # Average only over target tokens (masked mean)
+            masked_loss = (loss_unreduced * mask).sum() / mask.sum().clamp(min=1e-9)
+            
+            return masked_loss.item()
 
 
 def test_textpath():

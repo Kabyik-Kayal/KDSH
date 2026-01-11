@@ -1,22 +1,26 @@
 """
-Visualization module for TextPath classifier analysis.
+Visualization module for Generative Reasoning analysis.
+Provides modular plotting utilities for evaluation and debugging.
 """
+
 from .visualize import (
-    extract_embeddings,
-    visualize_embedding_space,
-    analyze_attention_patterns,
-    plot_classification_confidence,
-    visualize_by_character,
-    visualize_by_book,
-    run_all_visualizations
+    plot_delta_distribution,
+    plot_feature_scatter,
+    plot_calibration_curve,
+    plot_confusion_matrix,
+    plot_feature_importance,
+    plot_per_novel_scores,
+    create_evaluation_dashboard,
+    COLORS
 )
 
 __all__ = [
-    'extract_embeddings',
-    'visualize_embedding_space',
-    'analyze_attention_patterns',
-    'plot_classification_confidence',
-    'visualize_by_character',
-    'visualize_by_book',
-    'run_all_visualizations'
+    'plot_delta_distribution',
+    'plot_feature_scatter',
+    'plot_calibration_curve',
+    'plot_confusion_matrix',
+    'plot_feature_importance',
+    'plot_per_novel_scores',
+    'create_evaluation_dashboard',
+    'COLORS'
 ]
