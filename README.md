@@ -2,8 +2,8 @@
 
 > **Can a biologically-inspired neural network detect when a character's backstory contradicts a 19th-century novel?**
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.6.1+ee4c2c.svg)](https://pytorch.org/)
 [![Pathway](https://img.shields.io/badge/Pathway-0.27+-green.svg)](https://pathway.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -144,7 +144,7 @@ This forces the BDH model to learn:
 
 ```
 KDSH/
-├── run_pipeline.py                    # 🚀 Main CLI entry point (187 lines)
+├── run_pipeline.py                    #  Main CLI entry point (187 lines)
 ├── requirements.txt                   # Dependencies (293 packages)
 ├── results.csv                        # Final predictions for submission
 ├── LICENSE                            # MIT License
@@ -225,22 +225,6 @@ KDSH/
 └── logs/                              # Training logs
 ```
 
-### Real Line Counts
-
-Total Python code: **~2,500 lines** across core modules
-- `run_pipeline.py`: 461 lines (main orchestration)
-- `textpath.py`: 381 lines (BDH model)  
-- `bdh.py`: 380 lines (educational BDH core)
-- `visualize.py`: 681 lines (plotting utilities)
-- `evaluate.py`: 431 lines (evaluation logic)
-- `calibration.py`: 353 lines (perplexity delta training)
-- `consistency_scorer.py`: 321 lines (delta computation)
-- `entity_threading.py`: 321 lines (character extraction)
-- `retrieval.py`: 186 lines (Pathway RAG)
-- `config.py`: 125 lines (configuration)
-
----
-
 ## 🔧 Installation
 
 ### Prerequisites
@@ -265,16 +249,16 @@ pip install -r requirements.txt
 
 ### Key Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `torch` | 2.9.1 | Deep learning framework |
-| `pathway` | 0.27.1 | RAG document indexing (Track B requirement) |
-| `sentence-transformers` | 5.2.0 | Embedding model for retrieval |
-| `tokenizers` | 0.22.2 | BPE tokenizer |
-| `scikit-learn` | 1.8.0 | Metrics and evaluation |
-| `pandas` | 2.3.3 | Data manipulation |
-| `matplotlib` | 3.10.8 | Visualization |
-| `tqdm` | 4.67.1 | Progress bars |
+| Package | Purpose |
+|---------|----------|
+| `torch` | Deep learning framework |
+| `pathway` | RAG document indexing |
+| `sentence-transformers` | Embedding model for retrieval |
+| `tokenizers` | BPE tokenizer |
+| `scikit-learn` | Metrics and evaluation |
+| `pandas` | Data manipulation |
+| `matplotlib` | Visualization |
+| `tqdm` | Progress bars |
 
 ---
 
@@ -283,8 +267,11 @@ pip install -r requirements.txt
 ### Quick Start: Complete Pipeline
 
 ```bash
-# Run everything: pretrain → train → evaluate → predict
-python run_pipeline.py --mode full
+#This pretrains the BDH models on both novels with entity threading (50 epochs, ~2 hours on GPU)
+python run_pipeline.py --mode pretrain 
+
+#This will run the entire pipeline from classification model training to prediction (EXCLUDING Pretraining)
+python run_pipeline.py --mode full 
 ```
 
 This will:
@@ -720,7 +707,7 @@ class PathwayNovelRetriever:
 - **Data**: 70% raw novel + 30% entity threads
 - **Batch size**: 16 sequences × 512 tokens
 - **Optimizer**: AdamW (lr=3e-4, weight_decay=0.01)
-- **Duration**: 50 epochs (~2 hours on RTX 3090)
+- **Duration**: 50 epochs (~60 mins on  H200)
 - **Loss**: Cross-entropy on vocabulary
 
 **Calibration** (Supervised Classification):
