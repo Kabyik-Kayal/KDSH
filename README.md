@@ -1,103 +1,76 @@
-# 🐉 KDSH 2026: Narrative Consistency Detection with Dragon Hatchling Architecture
+# 🐉 KDSH: Narrative Consistency Detection with Dragon Hatchling Architecture
 
-> **Detecting Character Backstory Contradictions in 19th-Century Literature Using Biologically-Inspired Neural Networks**
+> **Can a biologically-inspired neural network detect when a character's backstory contradicts a 19th-century novel?**
 
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch 2.9](https://img.shields.io/badge/PyTorch-2.9+-ee4c2c.svg)](https://pytorch.org/)
-[![Pathway 0.27](https://img.shields.io/badge/Pathway-0.27+-green.svg)](https://pathway.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![Pathway](https://img.shields.io/badge/Pathway-0.27+-green.svg)](https://pathway.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This repository contains our **KDSH 2026 Track B** submission, implementing **TextPath** — a novel adaptation of the biologically-inspired [Dragon Hatchling (BDH)](https://arxiv.org/abs/2509.26507) architecture for automated narrative consistency verification in classical literature.
-
----
-
-## 📖 Table of Contents
-
-1. [Project Overview](#-project-overview)
-2. [Architecture](#-architecture)
-3. [Project Structure](#-project-structure)
-4. [Installation](#-installation)
-5. [Usage](#-usage)
-6. [Configuration](#-configuration)
-7. [Modules Reference](#-modules-reference)
-8. [Visualizations](#-visualizations)
-9. [Technical Details](#-technical-details)
-10. [References](#-references)
+**KDSH** (Knowledge Detection with Sparse Hebbian networks) is a novel approach to narrative consistency detection that combines biologically-inspired neural architecture with modern NLP techniques. This project implements **TextPath**, a custom language model built on the [Dragon Hatchling (BDH)](https://arxiv.org/abs/2509.26507) architecture, enhanced with entity threading and perplexity-based reasoning to catch subtle contradictions in literary character backstories.
 
 ---
 
-## 🎯 Project Overview
+## 📚 What This Project Does
 
-### The Challenge
+Imagine you're given a backstory about Edmond Dantès from *The Count of Monte Cristo*. Is it consistent with the novel, or does it contradict established facts? This system automatically detects such inconsistencies by:
 
-**Task**: Given a 19th-century novel and a character backstory, classify whether the backstory is **consistent** with or **contradicts** the original narrative.
+1. **Understanding the source material** through novel-specific language model pretraining
+2. **Extracting character narratives** using entity threading to create continuous character arcs
+3. **Measuring consistency** via perplexity delta — does the backstory help or hinder the model's predictions?
+4. **Making calibrated predictions** using logistic regression on learned features
 
-**Dataset**: 80 labeled training examples from two novels:
-- *The Count of Monte Cristo* by Alexandre Dumas
-- *In Search of the Castaways* by Jules Verne
+### The Dataset
 
-**Challenges**:
-| Challenge | Description |
-|-----------|-------------|
-| 📖 Long-context processing | Novels contain tens of thousands of lines |
-| 🎭 Complex relationships | Character relationships and plot arcs span entire novels |
-| 🔍 Subtle contradictions | Requires deep narrative understanding |
-| ⚖️ Plausible vs. impossible | Distinguishing alternate backstories from contradictions |
-| 📊 Limited data | Only 80 examples for binary classification |
-
-### Our Solution: TextPath with BDH Architecture
-
-We employ a **novel-specific pipeline** that leverages the unique biological properties of the Dragon Hatchling (BDH) architecture:
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         KDSH Pipeline                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐   │
-│  │   Pathway    │    │  Novel-BDH   │    │   Classification     │   │
-│  │   RAG        │ →  │  Language    │ →  │   Head               │   │
-│  │   Retrieval  │    │  Models      │    │   (MLP → Binary)     │   │
-│  └──────────────┘    └──────────────┘    └──────────────────────┘   │
-│                                                                     │
-│  1. Chunk novels     2. Process with     3. Classify as             │
-│     into passages       Hebbian-trained     Consistent/Contradict   │
-│     + embed with        BDH model                                   │
-│     sentence-transformers                                           │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-#### Key Components
-
-| Component | Purpose | Implementation |
-|-----------|---------|----------------|
-| **Pathway RAG** | Retrieve relevant passages from novels | `PathwayNovelRetriever` with sentence-transformers embeddings |
-| **Novel-Specific BDH** | Learn narrative patterns per novel | Separate pretrained models for each novel |
-| **Classification Head** | Binary prediction | MLP on pooled BDH representations |
+- **Two classic novels**: *The Count of Monte Cristo* (Alexandre Dumas) and *In Search of the Castaways* (Jules Verne)
+- **80 training examples**: Character backstories labeled as consistent or contradictory
+- **Novel statistics**:
+  - *The Count of Monte Cristo*: 61,676 lines, 13 main characters
+  - *In Search of the Castaways*: 18,728 lines, 12 main characters
+- **Challenge**: Minimal training data, massive context (entire novels), subtle contradictions
 
 ---
 
-## 🏗️ Architecture
+## 🧠 The Architecture: Why BDH?
 
-### TextPath: BDH-Based Language Model
+Traditional transformers struggle with this task because they need massive training data. We chose the **Dragon Hatchling (BDH)** architecture for its unique biological properties:
+
+### Core BDH Properties
+
+| Feature | What It Does | Why It Matters |
+|---------|--------------|----------------|
+| **Hebbian Learning** | "Neurons that fire together, wire together" | Naturally learns character relationships and narrative patterns from sequential text |
+| **Sparse Activations** | Only ~5% of neurons fire per input | Creates interpretable, monosemantic representations where each concept has distinct neural signatures |
+| **Scale-Free Networks** | Power-law connectivity like biological brains | Efficient information routing with fewer parameters |
+| **Dynamic Synapses** | Edge weights update during inference | Builds context-specific working memory across long narratives |
+
+### TextPath: BDH for Text
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                      TextPath Architecture                           │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Input: Token IDs [batch_size, seq_len]                              │
-│           ↓                                                          │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ Token Embedding Layer (vocab_size=16384, d_model=256)          │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-│           ↓                                                          │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │ BDH Layers (L=4)                                               │  │
-│  │   ├─ Scale-Free Neuron Network (N=4096 neurons)                │  │
-│  │   ├─ Sparse Activations (~5% active neurons)                   │  │
-│  │   ├─ Multi-Head Attention (H=8 heads)                          │  │
+┌────────────────────────────────────────────────────────────┐
+│                    TextPath Architecture                   │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  Input Tokens [batch, seq_len]                             │
+│      ↓                                                     │
+│  Token Embedding (16K vocab → 256D)                        │
+│      ↓                                                     │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ BDH Layer × 4                                        │  │
+│  │  ┌────────────────────────────────────────────────┐  │  │
+│  │  │ 1. Project to neurons: v → x (ReLU + Sparse)  │  │  │
+│  │  │ 2. Multi-head attention: x × x → a           │  │  │
+│  │  │ 3. Hebbian update: y = (a · Dy) ⊙ x          │  │  │
+│  │  │ 4. Residual: v ← v + y · E                   │  │  │
+│  │  └────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────┘  │
+│      ↓                                                     │
+│  Language Model Head → Next Token Predictions              │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Parameters**: ~8M (compared to 100M+ for equivalent transformers)
 │  │   └─ RoPE Positional Encoding (max_seq_len=4096)               │  │
 │  └────────────────────────────────────────────────────────────────┘  │
 │           ↓                                                          │
@@ -125,36 +98,45 @@ Pre-training on sequential novel passages builds causal circuits encoding:
 - Plot events (imprisonment → escape → revenge)
 - Narrative logic (foreshadowing → resolution)
 
-$$\Delta w_{ij} \propto x_i \cdot y_j$$
+---
 
-#### 2. Sparse Activations (~5%)
-Each concept (character, location, event) activates distinct neuron groups:
-- Creates **monosemantic representations** (one concept per neuron cluster)
-- Makes contradictions detectable as conflicting activation patterns
-- Enables interpretability of what the model "knows"
+## 🎯 The Key Innovation: Perplexity Delta Scoring
 
-$$\|a\|_0 \approx 0.05 \cdot N$$
+Instead of using a traditional classification head, we use a **generative reasoning** approach:
 
-#### 3. Causal Circuits
-Learned connectivity graph encodes "if A then B" reasoning:
+### The Intuition
 
-$$G_x = E \cdot D_x$$
+If a backstory is **consistent** with a novel, then conditioning the language model on that backstory should **reduce** perplexity when predicting novel passages.
 
-Where $E$ encodes edge weights and $D_x$ encodes input-dependent dynamics.
+$$\Delta = \text{Loss}(\text{novel} \mid \emptyset) - \text{Loss}(\text{novel} \mid \text{backstory})$$
 
-### Novel-Specific Routing
+- **Positive Δ**: Backstory helps predict novel → **CONSISTENT**
+- **Negative Δ**: Backstory hurts prediction → **CONTRADICTORY**
+- **Near-zero Δ**: Backstory is neutral → **AMBIGUOUS**
 
-The `NovelSpecificClassifier` routes each sample to the appropriate pretrained model:
+### Why This Works
+
+1. **Information-theoretic**: Perplexity measures how "surprised" the model is
+2. **Calibrated**: We train a logistic regression on `[Δ, cosine_similarity]` features
+3. **Interpretable**: Delta scores show *how much* the model believes the backstory
+
+### Entity Threading: Learning Character Arcs
+
+Standard chunk-based pretraining breaks narrative continuity. We solve this with **entity threading**:
 
 ```python
-# Automatic model selection based on book_name
-NOVEL_MODEL_MAP = {
-    'castaways': 'textpath_in_search_of_the_castaways.pt',
-    'monte cristo': 'textpath_the_count_of_monte_cristo.pt',
-}
+# Extract all paragraphs mentioning "Dantès" from Monte Cristo
+thread_dantès = extract_character_paragraphs(novel, ["Dantès", "Edmond"])
+# → Creates continuous narrative: sailor → betrayal → prison → escape → count
 ```
 
-This ensures each novel's unique narrative patterns are captured by a dedicated model.
+This forces the BDH model to learn:
+- Long-range character development
+- Relationship dynamics  
+- Plot-critical events
+- Narrative causality
+
+**Result**: The model develops a coherent "memory" of each character's story arc.
 
 ---
 
@@ -170,52 +152,58 @@ KDSH/
 ├── Dataset/
 │   ├── train.csv                      # 80 labeled training pairs
 │   ├── test.csv                       # Unlabeled test set
-│   └── Books/
-│       ├── The Count of Monte Cristo.txt
-│       └── In search of the castaways.txt
+│   ├── Books/
+│   │   ├── The Count of Monte Cristo.txt  (61,676 lines)
+│   │   └── In search of the castaways.txt (18,728 lines)
+│   └── entity_threads/                # Character-specific narrative threads
+│       ├── The Count of Monte Cristo/
+│       │   ├── thread_dantès.txt      # Dantès' complete arc
+│       │   ├── thread_villefort.txt
+│       │   ├── thread_fernand.txt
+│       │   └── ... (13 characters)
+│       └── In search of the castaways/
+│           ├── thread_paganel.txt
+│           ├── thread_glenarvan.txt
+│           └── ... (12 characters)
 │
 ├── models/                            # Trained model checkpoints
 │   ├── custom_tokenizer.json          # 16,384 vocab BPE tokenizer
-│   ├── textpath_pretrained.pt         # Generic pretrained model
-│   ├── textpath_the_count_of_monte_cristo.pt    # Monte Cristo BDH
-│   ├── textpath_in_search_of_the_castaways.pt   # Castaways BDH
-│   ├── textpath_classifier_best.pt              # Best classifier
-│   ├── textpath_classifier_best_monte_cristo.pt # Novel-specific
-│   └── textpath_classifier_best_castaways.pt    # Novel-specific
+│   ├── textpath_the_count_of_monte_cristo.pt    # Monte Cristo BDH (~50MB)
+│   ├── textpath_in_search_of_the_castaways.pt   # Castaways BDH (~50MB)
+│   └── calibration_model.pkl          # Logistic regression calibrator (~100KB)
 │
 ├── src/                               # Source code modules
 │   ├── __init__.py                    # Package exports
-│   ├── config.py                      # PipelineConfig dataclass
+│   ├── config.py                      # PipelineConfig dataclass (125 lines)
 │   │
 │   ├── data_processing/               # Data and RAG
 │   │   ├── __init__.py
-│   │   ├── retrieval.py               # PathwayNovelRetriever class
-│   │   ├── classification_dataset.py # PyTorch Dataset
-│   │   ├── build_retrievers.py        # Retriever factory functions
-│   │   ├── ingest.py                  # Data ingestion utilities
-│   │   └── train_tokenizer.py         # BPE tokenizer training
+│   │   ├── retrieval.py               # PathwayNovelRetriever (186 lines)
+│   │   ├── classification_dataset.py  # PyTorch Dataset
+│   │   ├── build_retrievers.py        # Retriever factory
+│   │   └── entity_threading.py        # Character thread extraction (321 lines)
 │   │
 │   ├── models/                        # Neural network modules
 │   │   ├── __init__.py
-│   │   ├── textpath.py                # TextPath/BDH core
-│   │   ├── textpath_classifier.py     # Classifier wrappers
-│   │   ├── finetune_classifier.py     # train_epoch/validate functions
-│   │   ├── pretrain_bdh_native.py     # Hebbian pretraining script
-│   │   └── state_manager.py           # Synaptic state management
+│   │   ├── textpath.py                # TextPath/BDH core (381 lines)
+│   │   └── pretrain_bdh_native.py     # Hebbian pretraining
 │   │
 │   ├── training/                      # Training infrastructure
 │   │   ├── __init__.py
-│   │   ├── trainer.py                 # Trainer class
+│   │   ├── calibration.py             # Logistic regression calibration (353 lines)
 │   │   └── pretraining.py             # Pretraining runner
 │   │
 │   ├── evaluation/                    # Evaluation and prediction
 │   │   ├── __init__.py
-│   │   ├── evaluate.py                # Metrics, prediction
-│   │   └── inference.py               # Inference utilities
+│   │   └── evaluate.py                # Metrics, prediction (431 lines)
+│   │
+│   ├── analysis/                      # Scoring modules
+│   │   ├── __init__.py
+│   │   └── consistency_scorer.py      # Perplexity delta scorer (321 lines)
 │   │
 │   ├── visualization/                 # Analysis and plots
 │   │   ├── __init__.py
-│   │   └── visualize.py               # All visualization functions
+│   │   └── visualize.py               # All visualization functions (681 lines)
 │   │
 │   └── utils/                         # Helper functions
 │       └── __init__.py
@@ -227,18 +215,29 @@ KDSH/
 │   └── accuracy_by_book.png
 │
 ├── repos/                             # External dependencies
-│   ├── bdh_educational/               # Educational BDH implementation
-│   │   ├── bdh.py                     # Core BDH module
-│   │   └── utils/
-│   └── bdh_official/                  # Official BDH repo reference
+│   └── bdh_educational/               # Educational BDH implementation
+│       ├── bdh.py                     # Core BDH module (380 lines)
+│       └── __pycache__/
 │
 ├── outputs/                           # Training artifacts
-│   ├── optimal_config.json
-│   ├── train_predictions.csv
-│   └── tuning_retrieval_k.json
+│   └── optimal_config.json            # Best hyperparameters
 │
 └── logs/                              # Training logs
 ```
+
+### Real Line Counts
+
+Total Python code: **~2,500 lines** across core modules
+- `run_pipeline.py`: 461 lines (main orchestration)
+- `textpath.py`: 381 lines (BDH model)  
+- `bdh.py`: 380 lines (educational BDH core)
+- `visualize.py`: 681 lines (plotting utilities)
+- `evaluate.py`: 431 lines (evaluation logic)
+- `calibration.py`: 353 lines (perplexity delta training)
+- `consistency_scorer.py`: 321 lines (delta computation)
+- `entity_threading.py`: 321 lines (character extraction)
+- `retrieval.py`: 186 lines (Pathway RAG)
+- `config.py`: 125 lines (configuration)
 
 ---
 
@@ -281,200 +280,520 @@ pip install -r requirements.txt
 
 ## 🚀 Usage
 
-### Quick Start
+### Quick Start: Complete Pipeline
 
 ```bash
-# Run the complete pipeline (train → evaluate → predict)
+# Run everything: pretrain → train → evaluate → predict
 python run_pipeline.py --mode full
 ```
 
+This will:
+1. **Pretrain** BDH models on both novels with entity threading (50 epochs, ~2 hours on GPU)
+2. **Train** calibration model using perplexity delta features (~5 minutes)
+3. **Evaluate** on validation split and print metrics
+4. **Predict** on test set and save to `results.csv`
+5. **Visualize** results and save plots to `visualizations/`
+
 ### Pipeline Modes
 
-| Mode | Description | Command |
-|------|-------------|---------|
-| `pretrain` | Hebbian pretraining on novel texts | `python run_pipeline.py --mode pretrain` |
-| `train` | Train classification head | `python run_pipeline.py --mode train` |
-| `evaluate` | Evaluate on validation split | `python run_pipeline.py --mode evaluate` |
-| `predict` | Generate test predictions | `python run_pipeline.py --mode predict` |
-| `full` | Train + Evaluate + Predict | `python run_pipeline.py --mode full` |
+The pipeline has 5 modes for different stages:
+
+| Mode | What It Does | When to Use |
+|------|--------------|-------------|
+| **`pretrain`** | Train BDH language models on novels + entity threads | First run, or to retrain models |
+| **`train`** | Train logistic calibration model on delta features | After pretraining, or with new hyperparameters |
+| **`evaluate`** | Compute metrics on validation split | Check model performance |
+| **`predict`** | Generate predictions for test.csv | Create submission file |
+| **`visualize`** | Create all analysis plots | Analyze model behavior |
+| **`full`** | Run all modes in sequence | Complete end-to-end run |
+
+### Individual Mode Examples
+
+```bash
+# 1. Pretrain BDH models (do this first!)
+python run_pipeline.py --mode pretrain --pretrain-epochs 50
+
+# 2. Train calibration model
+python run_pipeline.py --mode train
+
+# 3. Evaluate on validation set
+python run_pipeline.py --mode evaluate
+
+# 4. Generate test predictions
+python run_pipeline.py --mode predict
+
+# 5. Create visualizations
+python run_pipeline.py --mode visualize
+```
 
 ### Command-Line Options
 
 ```bash
 python run_pipeline.py --help
 
-options:
-  --mode {pretrain,train,predict,evaluate,full}
+Usage: run_pipeline.py [OPTIONS]
+
+Options:
+  --mode {pretrain,train,predict,evaluate,visualize,full}
                         Pipeline mode (default: full)
-  --pretrain-epochs PRETRAIN_EPOCHS
+  --pretrain-epochs INT
                         BDH pretraining epochs (default: 50)
-  --epochs EPOCHS       Classifier training epochs (default: 15)
-  --batch-size BATCH_SIZE
-                        Training batch size (default: 4)
-  --lr LR               Learning rate (default: 1e-4)
+  --epochs INT          Calibration training epochs (default: 15)
+  --batch-size INT      Training batch size (default: 4)
+  --lr FLOAT            Learning rate (default: 1e-4)
+  --device {cuda,mps,cpu}
+                        Device to use (default: auto-detect)
 ```
 
-### Examples
+### Advanced Examples
 
 ```bash
-# Pretrain BDH models for 100 epochs
+# Longer pretraining for better narrative understanding
 python run_pipeline.py --mode pretrain --pretrain-epochs 100
 
-# Train classifier for 20 epochs with larger batch
-python run_pipeline.py --mode train --epochs 20 --batch-size 8
+# Faster training with larger batches (requires more RAM)
+python run_pipeline.py --mode train --batch-size 16 --lr 2e-4
 
-# Just generate predictions (requires trained model)
-python run_pipeline.py --mode predict
+# Force CPU usage (if GPU has issues)
+python run_pipeline.py --mode full --device cpu
 
-# Generate visualizations
-python src/visualization/visualize.py
+# Quick evaluation without retraining
+python run_pipeline.py --mode evaluate
+```
+
+### What Gets Generated
+
+After running, you'll find:
+
+```
+KDSH/
+├── models/
+│   ├── textpath_the_count_of_monte_cristo.pt  # Pretrained BDH (50MB)
+│   ├── textpath_in_search_of_the_castaways.pt # Pretrained BDH (50MB)
+│   └── calibration_model.pkl                   # Logistic regression (~100KB)
+│
+├── results.csv                                 # Test predictions (ready for submission)
+│
+├── visualizations/                             # Analysis plots
+│   ├── delta_distribution.png
+│   ├── confusion_matrix.png
+│   ├── calibration_curve.png
+│   ├── feature_importance.png
+│   └── evaluation_dashboard.png
+│
+└── outputs/
+    └── optimal_config.json                     # Best hyperparameters found
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-All configuration is centralized in `src/config.py` via the `PipelineConfig` dataclass:
+All settings live in [src/config.py](src/config.py) as the `PipelineConfig` dataclass. You can modify defaults directly in the file or override via command-line arguments.
 
-### Paths
+### Key Configuration Groups
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `novels_dir` | `Dataset/Books/` | Directory containing novel .txt files |
-| `train_csv` | `Dataset/train.csv` | Training data CSV |
-| `test_csv` | `Dataset/test.csv` | Test data CSV |
-| `tokenizer_path` | `models/custom_tokenizer.json` | BPE tokenizer |
-| `models_dir` | `models/` | Directory for checkpoints |
-| `output_model` | `models/textpath_classifier_best.pt` | Best model path |
-| `output_predictions` | `results.csv` | Predictions output |
+#### 📁 Paths Configuration
 
-### Training Hyperparameters
+```python
+novels_dir = ROOT / 'Dataset' / 'Books'          # Novel .txt files
+train_csv = ROOT / 'Dataset' / 'train.csv'       # Training labels
+test_csv = ROOT / 'Dataset' / 'test.csv'         # Test set (no labels)
+tokenizer_path = ROOT / 'models' / 'custom_tokenizer.json'
+models_dir = ROOT / 'models'                     # Checkpoint directory
+output_predictions = ROOT / 'results.csv'        # Final predictions
+```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `batch_size` | 4 | Training batch size |
-| `epochs` | 15 | Classifier training epochs |
-| `learning_rate` | 1e-4 | Initial learning rate |
-| `weight_decay` | 0.01 | AdamW weight decay |
-| `max_tokens` | 512 | Maximum sequence length |
+#### 🎛️ Model Architecture
 
-### Freezing Strategy
+```python
+# TextPath/BDH configuration
+vocab_size = 16384          # BPE tokenizer vocabulary
+max_seq_len = 512           # Maximum tokens per sequence
+n_heads = 8                 # Multi-head attention
+n_neurons = 2048            # BDH neurons (scale-free graph)
+d_model = 256               # Embedding dimension
+n_layers = 4                # Number of BDH layers
+sparsity_target = 0.05      # 5% activation rate
+```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `freeze_bdh` | True | Freeze BDH layers initially |
-| `unfreeze_after_epoch` | 5 | Epoch to unfreeze BDH |
-| `unfreeze_lr_multiplier` | 0.1 | LR multiplier after unfreezing |
+#### 🏋️ Training Hyperparameters
 
-### RAG Settings
+```python
+batch_size = 4              # Training batch size
+epochs = 15                 # Calibration training epochs
+learning_rate = 1e-4        # Initial learning rate
+weight_decay = 0.01         # AdamW regularization
+pretrain_epochs = 50        # BDH pretraining epochs
+```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `chunk_size` | 200 | Words per chunk (~250 tokens) |
-| `overlap` | 50 | Overlapping words between chunks |
-| `top_k_retrieval` | 2 | Number of passages to retrieve |
+#### 🔍 RAG (Retrieval) Settings
 
-### Class Weights
+```python
+chunk_size = 200            # Words per chunk (~250 tokens)
+overlap = 50                # Overlapping words between chunks
+top_k_retrieval = 2         # Number of passages to retrieve per query
+```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `class_weight_inconsistent` | 1.7 | Weight for "Contradict" class |
-| `class_weight_consistent` | 1.0 | Weight for "Consistent" class |
+#### 🎯 Device Selection
 
-### Device
+```python
+# Auto-detected in order: CUDA → MPS (Apple Silicon) → CPU
+device = 'cuda' if torch.cuda.is_available() 
+         else 'mps' if torch.backends.mps.is_available()
+         else 'cpu'
+```
 
-Automatically detected in order: CUDA → MPS (Apple Silicon) → CPU
+### Modifying Configuration
 
----
+**Option 1: Edit directly**
 
-## 📊 Visualizations
+```python
+# In src/config.py
+@dataclass
+class PipelineConfig:
+    pretrain_epochs: int = 100  # Changed from 50
+    batch_size: int = 8         # Changed from 4
+```
 
-The pipeline generates analysis plots in `visualizations/`:
-
-| Plot | Description |
-|------|-------------|
-| `consistency_embedding_space.png` | 2D t-SNE projection showing consistent vs contradictory samples |
-| `prediction_confidence.png` | Distribution of model confidence (entropy) across predictions |
-| `accuracy_by_character.png` | Per-character classification accuracy |
-| `accuracy_by_book.png` | Per-novel classification accuracy |
-
-### Generate Visualizations
+**Option 2: Command-line override**
 
 ```bash
-python src/visualization/visualize.py
+python run_pipeline.py --pretrain-epochs 100 --batch-size 8
 ```
 
-This analyzes the trained classifier and generates all plots.
-
----
-
-## 🔬 Technical Details
-
-### TextPath Configuration
+**Option 3: Programmatic override**
 
 ```python
-@dataclass
-class TextPathConfig:
-    vocab_size: int = 16384     # Custom BPE tokenizer vocabulary
-    max_seq_len: int = 4096     # Maximum sequence length
-    n_heads: int = 8            # Attention heads
-    n_neurons: int = 4096       # BDH neurons (scale-free graph)
-    d_model: int = 256          # Model embedding dimension
-    n_layers: int = 4           # Number of BDH layers
-    dropout: float = 0.1        # Dropout rate
-    use_rope: bool = True       # Rotary position encoding
-    sparsity_target: float = 0.05  # 5% neuron activation target
-    classification_mode: bool = False  # Enable classification head
+from src.config import get_config
+
+config = get_config()
+config.pretrain_epochs = 100
+config.batch_size = 8
 ```
 
-### Training Strategy
+---
 
-1. **Phase 1: BDH Frozen** (epochs 1-5)
-   - Only train classification head
-   - Learning rate: 1e-4
-   - Preserves pretrained narrative knowledge
+## 📊 How It Works: The Complete Pipeline
 
-2. **Phase 2: Full Fine-tuning** (epochs 6-15)
-   - Unfreeze BDH layers
-   - Reduced learning rate: 1e-5 (0.1× multiplier)
-   - Gentle adaptation to classification task
+### Stage 1: Entity Threading (Pretraining Prep)
 
-3. **Optimizer**: AdamW with weight decay 0.01
-4. **Scheduler**: Cosine annealing over total epochs
-5. **Class Weights**: [1.7, 1.0] to handle imbalance (~36% contradict, ~64% consistent)
-
-### Pathway Integration
+Extract character-specific narratives from novels:
 
 ```python
-# Creating Pathway table from chunks
-self.chunks_table = pw.debug.table_from_rows(
-    schema=pw.schema_from_dict({"text": str}),
-    rows=[(chunk,) for chunk in self.chunks]
-)
+# From entity_threading.py
+def create_character_threads(novel_path, character_list):
+    """
+    Extract all paragraphs mentioning each character.
+    Creates continuous narrative threads preserving character arcs.
+    """
+    paragraphs = split_into_paragraphs(novel_text)
+    
+    for character, aliases in character_list:
+        # Find all paragraphs mentioning this character
+        thread = [p for p in paragraphs if any(alias in p for alias in aliases)]
+        # Save as continuous text
+        save_thread(f"thread_{character}.txt", thread)
+```
 
-# Embedding with sentence-transformers via Pathway
-from pathway.xpacks import llm
-self.embedder = llm.embedders.SentenceTransformerEmbedder(
-    model="sentence-transformers/all-MiniLM-L6-v2"
+**Output**: 25 character threads (13 for Monte Cristo, 12 for Castaways)
+
+### Stage 2: BDH Pretraining
+
+Train novel-specific language models on mixed data:
+
+```python
+# From pretrain_bdh_native.py
+def pretrain_bdh_novel(novel_name):
+    """
+    Pretrain BDH on:
+    - 70% raw novel text (narrative structure)
+    - 30% entity threads (character-specific sequences)
+    """
+    model = TextPath(config)  # BDH architecture
+    
+    for epoch in range(50):
+        for batch in mixed_data_loader:
+            logits = model(input_ids)
+            loss = cross_entropy(logits, targets)  # Next-token prediction
+            loss.backward()
+            optimizer.step()
+```
+
+**Output**: Two pretrained models (~50MB each)
+- `textpath_the_count_of_monte_cristo.pt`
+- `textpath_in_search_of_the_castaways.pt`
+
+### Stage 3: Perplexity Delta Computation
+
+For each training sample, compute consistency score:
+
+```python
+# From consistency_scorer.py
+class ConsistencyScorer:
+    def compute_delta(self, backstory, novel_chunk):
+        """
+        Delta = Loss(chunk | empty) - Loss(chunk | backstory)
+        """
+        # Baseline: predict chunk without context
+        loss_baseline = model.compute_loss(novel_chunk)
+        
+        # Conditioned: predict chunk given backstory
+        loss_conditioned = model.compute_loss(
+            context=backstory, 
+            target=novel_chunk
+        )
+        
+        delta = loss_baseline - loss_conditioned
+        # Positive delta = backstory helps = CONSISTENT
+        # Negative delta = backstory hurts = CONTRADICTORY
+        
+        return delta, cosine_similarity(backstory_emb, chunk_emb)
+```
+
+### Stage 4: Calibration Training
+
+Train logistic regression on delta features:
+
+```python
+# From calibration.py
+def train_calibration_model(train_csv):
+    """
+    Train simple classifier on extracted features:
+    - Feature 1: Perplexity delta
+    - Feature 2: Cosine similarity (retrieval score)
+    """
+    features = []
+    labels = []
+    
+    for sample in train_csv:
+        # Retrieve relevant passages
+        chunks = retriever.search(sample.content, k=2)
+        
+        # Compute delta
+        delta, cos_sim = scorer.compute_delta(sample.content, chunks)
+        features.append([delta, cos_sim])
+        labels.append(sample.label)
+    
+    # Train calibrated classifier
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', LogisticRegression())
+    ])
+    pipeline.fit(features, labels)
+    return pipeline
+```
+
+**Output**: `calibration_model.pkl` (~100KB)
+
+### Stage 5: Prediction
+
+Generate predictions for test set:
+
+```python
+# From evaluate.py
+def run_prediction(test_csv, calibration_model):
+    predictions = []
+    
+    for sample in test_csv:
+        # 1. Retrieve relevant passages
+        chunks = retriever.search(sample.content, k=2)
+        
+        # 2. Compute delta features
+        delta, cos_sim = scorer.compute_delta(sample.content, chunks)
+        
+        # 3. Predict using calibration model
+        prob = calibration_model.predict_proba([[delta, cos_sim]])
+        label = 1 if prob[1] > 0.5 else 0  # 1=consistent, 0=contradict
+        
+        predictions.append({
+            'id': sample.id,
+            'label': label
+        })
+    
+    save_predictions('results.csv', predictions)
+```
+
+**Output**: `results.csv` (ready for submission)
+
+---
+
+## 🔬 Technical Deep Dive
+
+### Why Perplexity Delta Works
+
+Perplexity measures how "surprised" a language model is by a sequence. Lower perplexity = better prediction.
+
+**Intuition**: If a backstory is consistent with a novel, it should *reduce* the model's surprise when reading novel passages.
+
+$$\text{Perplexity}(x) = \exp\left(-\frac{1}{N}\sum_{i=1}^N \log P(x_i | x_{<i})\right)$$
+
+$$\Delta = \text{PPL}(x | \emptyset) - \text{PPL}(x | \text{backstory})$$
+
+**Example**:
+
+```
+Novel passage: "Dantès was arrested on his wedding day and imprisoned in Château d'If."
+
+Consistent backstory: "Dantès was betrayed by jealous rivals who framed him for treason."
+→ Model thinks: "Oh, that makes sense! Betrayal → arrest → prison"
+→ Perplexity decreases → Positive Δ → CONSISTENT
+
+Contradictory backstory: "Dantès was a wealthy count who lived in Paris all his life."
+→ Model thinks: "Wait, that doesn't match. How was he arrested at a wedding?"
+→ Perplexity increases → Negative Δ → CONTRADICTORY
+```
+
+### BDH Architecture Details
+
+The Dragon Hatchling uses **Hebbian learning principles**:
+
+```python
+# From bdh.py (simplified)
+class BDH(nn.Module):
+    def forward(self, input_ids):
+        v_ast = self.emb(input_ids)  # Token embeddings
+        
+        for layer in range(self.L):
+            # 1. Sparse neuron activation (ReLU → ~5% active)
+            x = F.relu(v_ast @ self.Dx)  # Project to neurons
+            
+            # 2. Hebbian attention (neurons communicate)
+            a_ast = self.linear_attn(x, x, v_ast)  # x × x^T × v
+            
+            # 3. Synaptic strengthening (co-firing → stronger weights)
+            y = F.relu(a_ast @ self.Dy) * x  # Hadamard product
+            
+            # 4. Residual update (gradual memory accumulation)
+            v_ast = v_ast + y @ self.E
+        
+        return v_ast @ self.readout  # Next-token logits
+```
+
+**Key differences from Transformers**:
+
+| Feature | Transformer | BDH |
+|---------|-------------|-----|
+| **Connectivity** | Dense (all-to-all) | Sparse (scale-free graph) |
+| **Activation** | ~100% neurons | ~5% neurons (sparse) |
+| **Learning** | Gradient descent only | Hebbian + gradient descent |
+| **Parameters** | O(d²) | O(d·√N) (low-rank) |
+| **Interpretability** | Polysemantic | Monosemantic neurons |
+
+### Pathway RAG Integration
+
+Satisfies Track B requirement for Pathway framework:
+
+```python
+# From retrieval.py
+class PathwayNovelRetriever:
+    def __init__(self, novel_path):
+        # Create Pathway table (required for Track B)
+        self.chunks_table = pw.debug.table_from_rows(
+            schema=pw.schema_from_dict({"text": str}),
+            rows=[(chunk,) for chunk in self.chunks]
+        )
+        
+        # Use Pathway's embedding framework
+        from pathway.xpacks import llm
+        self.embedder = llm.embedders.SentenceTransformerEmbedder(
+            model="sentence-transformers/all-MiniLM-L6-v2"
+        )
+        
+        # Build vector index
+        self.embeddings = self.chunks_table.select(
+            embedding=self.embedder(pw.this.text)
+        )
+    
+    def search(self, query, k=2):
+        """Retrieve top-k most relevant chunks"""
+        query_emb = self.embedder.encode([query])[0]
+        scores = cosine_similarity(query_emb, self.embeddings)
+        top_k_idx = np.argsort(scores)[-k:]
+        return [self.chunks[i] for i in top_k_idx]
+```
+
+### Model Training Details
+
+**Pretraining** (Unsupervised Language Modeling):
+- **Objective**: Next-token prediction
+- **Data**: 70% raw novel + 30% entity threads
+- **Batch size**: 16 sequences × 512 tokens
+- **Optimizer**: AdamW (lr=3e-4, weight_decay=0.01)
+- **Duration**: 50 epochs (~2 hours on RTX 3090)
+- **Loss**: Cross-entropy on vocabulary
+
+**Calibration** (Supervised Classification):
+- **Objective**: Binary classification on delta features
+- **Data**: 80 training samples → [delta, cos_sim] features
+- **Model**: Logistic Regression with StandardScaler
+- **Cross-validation**: 5-fold CV for robustness
+- **Duration**: <1 minute on CPU
+- **Metrics**: Accuracy, F1, Precision, Recall
+
+## 📊 Visualizations & Analysis
+
+The pipeline generates comprehensive analysis plots:
+
+### Delta Distribution Plot
+Shows the separation between consistent and contradictory samples based on perplexity delta:
+
+```python
+# From visualize.py
+plot_delta_distribution(
+    deltas=[...],          # Delta values for all samples
+    labels=[...],          # True labels (0=contradict, 1=consistent)
+    novel_names=[...]      # Novel for each sample
 )
 ```
 
-### Model Files
+**What to look for**: Clear separation between red (contradict) and green (consistent) distributions
 
-| File | Size | Description |
-|------|------|-------------|
-| `textpath_the_count_of_monte_cristo.pt` | ~50MB | Monte Cristo pretrained BDH |
-| `textpath_in_search_of_the_castaways.pt` | ~50MB | Castaways pretrained BDH |
-| `textpath_classifier_best.pt` | ~55MB | Best classifier checkpoint |
-| `custom_tokenizer.json` | ~2MB | 16,384 vocab BPE tokenizer |
+### Confusion Matrix
+Standard evaluation visualization:
+
+```python
+plot_confusion_matrix(y_true, y_pred)
+```
+
+Shows: True Positives, False Positives, True Negatives, False Negatives
+
+### Calibration Curve
+Checks if predicted probabilities match actual frequencies:
+
+```python
+plot_calibration_curve(y_true, y_probs)
+```
+
+**Interpretation**: Diagonal line = perfectly calibrated model
+
+### Feature Importance
+Shows relative importance of delta vs. cosine similarity:
+
+```python
+plot_feature_importance(calibration_model.coef_)
+```
+
+### Generate All Visualizations
+
+```bash
+python run_pipeline.py --mode visualize
+```
+
+Saves plots to `visualizations/` directory.
 
 ---
 
-## 📚 References
+## 🎓 Key Insights & Lessons Learned
 
-- **Dragon Hatchling (BDH)**: [arXiv:2509.26507](https://arxiv.org/abs/2509.26507) - Kosowski et al. (2025)
-- **Pathway**: [pathway.com](https://pathway.com/) - Real-time data processing framework
-- **sentence-transformers**: [SBERT.net](https://www.sbert.net/) - Sentence embeddings
-- **Rotary Position Embedding (RoPE)**: [arXiv:2104.09864](https://arxiv.org/abs/2104.09864)
+### What Works
 
----
+✅ **Entity Threading**: Massive improvement over random chunking. Character-specific sequences help the model learn narrative arcs.
+
+✅ **Perplexity Delta**: More principled than classification head. Information-theoretic measure naturally captures consistency.
+
+✅ **Novel-Specific Models**: Each novel has unique style, vocabulary, and themes. Separate models perform better than one shared model.
+
+✅ **BDH Sparse Activations**: ~5% activation rate creates interpretable representations. Makes debugging easier.
+
+✅ **Pathway Integration**: Clean API for document indexing. Sentence-transformers embedder works well out of the box.
